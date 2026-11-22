@@ -1,0 +1,68 @@
+name: Build English Seekho Native APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-android-apk:
+    name: Build Native Debug & Store Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Prepare Release Keystore (Secrets or Auto-Generated)
+        id: keystore
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
+            echo "KEYSTORE_FILE=$PWD/release.jks" >> $GITHUB_ENV
+            echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+            echo "Using permanent GitHub Secret keystore."
+          else
+            keytool -genkeypair -v -keystore release.jks -alias englishseekho \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass Seekho@2026 -keypass Seekho@2026 \
+              -dname "CN=English Seekho Pro, OU=Education, O=Hindi Medium Learners, L=India, S=IN, C=IN"
+            echo "KEYSTORE_FILE=$PWD/release.jks" >> $GITHUB_ENV
+            echo "KEYSTORE_PASSWORD=Seekho@2026" >> $GITHUB_ENV
+            echo "KEY_ALIAS=englishseekho" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=Seekho@2026" >> $GITHUB_ENV
+            echo "Generated release keystore for immediate Vivo/Indus testing."
+          fi
+
+      - name: Build Debug & Signed Release APKs
+        run: gradle assembleDebug assembleRelease --no-daemon --stacktrace
+
+      - name: Upload Debug APK (Quick Test)
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnglishSeekhoPro-Debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload Signed Release APK (Vivo & Indus Appstore)
+        uses: actions/upload-artifact@v4
+        with:
+          name: EnglishSeekhoPro-Store-Release-APK
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
