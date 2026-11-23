@@ -23,6 +23,22 @@ data class DailyTask(
     val targetTab: Int
 )
 
+data class DayCourseLesson(
+    val dayNumber: Int,
+    val weekLabelHi: String,
+    val titleHi: String,
+    val goalHi: String,
+    val sentences: List<Pair<String, String>>,
+    val goldenTipHi: String
+)
+
+data class DailyUseSentence(
+    val categoryHi: String,
+    val english: String,
+    val pronunciationHi: String,
+    val hindi: String
+)
+
 data class RoleplayTurn(
     val speaker: String,
     val englishText: String,

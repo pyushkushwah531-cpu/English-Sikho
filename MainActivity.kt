@@ -158,12 +158,21 @@ fun EnglishSeekhoRootApp() {
             when (selectedTab) {
                 0 -> HomeDashboardScreen(
                     progress = progress,
+                    speechCoach = speechCoach,
                     onToggleTask = { taskId, reward ->
                         updateProgress { p ->
                             val already = p.completedTaskIds.contains(taskId)
                             val newSet = if (already) p.completedTaskIds - taskId else p.completedTaskIds + taskId
                             val newXp = if (already) (p.xp - reward).coerceAtLeast(0) else p.xp + reward
                             p.copy(completedTaskIds = newSet, xp = newXp)
+                        }
+                    },
+                    onToggleCourseDay = { dayNumber ->
+                        updateProgress { p ->
+                            val already = p.completedDayNumbers.contains(dayNumber)
+                            val newDays = if (already) p.completedDayNumbers - dayNumber else p.completedDayNumbers + dayNumber
+                            val newXp = if (already) (p.xp - 20).coerceAtLeast(0) else p.xp + 20
+                            p.copy(completedDayNumbers = newDays, xp = newXp)
                         }
                     },
                     onNavigateTab = { selectedTab = it },

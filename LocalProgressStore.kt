@@ -10,6 +10,7 @@ data class UserProgress(
     val level: StudentLevel = StudentLevel.ZERO,
     val onboardingDone: Boolean = false,
     val completedTaskIds: Set<String> = emptySet(),
+    val completedDayNumbers: Set<Int> = emptySet(),
     val masteredWordIds: Set<String> = emptySet(),
     val reviewWordIds: Set<String> = emptySet(),
     val geminiApiKey: String = ""
@@ -28,6 +29,7 @@ class LocalProgressStore(context: Context) {
             level = level,
             onboardingDone = prefs.getBoolean("onboarding_done", false),
             completedTaskIds = readSet("completed_tasks"),
+            completedDayNumbers = readIntSet("completed_days"),
             masteredWordIds = readSet("mastered_words"),
             reviewWordIds = readSet("review_words"),
             geminiApiKey = prefs.getString("gemini_api_key", "") ?: ""
@@ -42,6 +44,7 @@ class LocalProgressStore(context: Context) {
             .putString("level", progress.level.name)
             .putBoolean("onboarding_done", progress.onboardingDone)
             .putString("completed_tasks", JSONArray(progress.completedTaskIds.toList()).toString())
+            .putString("completed_days", JSONArray(progress.completedDayNumbers.toList()).toString())
             .putString("mastered_words", JSONArray(progress.masteredWordIds.toList()).toString())
             .putString("review_words", JSONArray(progress.reviewWordIds.toList()).toString())
             .putString("gemini_api_key", progress.geminiApiKey)
@@ -55,6 +58,18 @@ class LocalProgressStore(context: Context) {
             val array = JSONArray(raw)
             for (i in 0 until array.length()) {
                 result.add(array.getString(i))
+            }
+        }
+        return result
+    }
+
+    private fun readIntSet(key: String): Set<Int> {
+        val raw = prefs.getString(key, "[]") ?: "[]"
+        val result = mutableSetOf<Int>()
+        runCatching {
+            val array = JSONArray(raw)
+            for (i in 0 until array.length()) {
+                result.add(array.getInt(i))
             }
         }
         return result
