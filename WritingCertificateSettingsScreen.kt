@@ -7,248 +7,298 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.englishseekho.pro.data.CurriculumRepository
 import com.englishseekho.pro.data.UserProgress
-import com.englishseekho.pro.data.WritingCorrection
-import com.englishseekho.pro.services.SpeechCoach
 import com.englishseekho.pro.ui.theme.CardSurface
 import com.englishseekho.pro.ui.theme.EmeraldLight
 import com.englishseekho.pro.ui.theme.EmeraldPrimary
 import com.englishseekho.pro.ui.theme.HairlineBorder
 import com.englishseekho.pro.ui.theme.SlateMuted
 import com.englishseekho.pro.ui.theme.SuccessGreen
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun WritingCertificateSettingsScreen(
+fun SettingsAlertDialog(
     progress: UserProgress,
-    speechCoach: SpeechCoach,
-    onSaveSettings: (name: String, geminiKey: String) -> Unit,
-    onAddXp: (Int) -> Unit
+    onDismiss: () -> Unit,
+    onSaveAll: (
+        name: String,
+        soundEnabled: Boolean,
+        vibrationEnabled: Boolean,
+        notificationsEnabled: Boolean,
+        reminderHour: Int,
+        geminiApiKey: String
+    ) -> Unit,
+    onSendTestNotification: () -> Unit,
+    onRetakeLevelTest: () -> Unit
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    var subTab by remember { mutableIntStateOf(0) } // 0 = Writing Coach, 1 = Certificate, 2 = Free Settings
-    var draft by remember { mutableStateOf(CurriculumRepository.writingTemplates.last().draftText) }
-    var corrections by remember { mutableStateOf<List<WritingCorrection>>(emptyList()) }
-    var aiRewrite by remember { mutableStateOf("") }
-    var isChecking by remember { mutableStateOf(false) }
-
     var nameInput by remember { mutableStateOf(progress.studentName) }
-    var keyInput by remember { mutableStateOf(progress.geminiApiKey) }
-    var savedMsg by remember { mutableStateOf("") }
+    var sound by remember { mutableStateOf(progress.soundEnabled) }
+    var vibration by remember { mutableStateOf(progress.vibrationEnabled) }
+    var notify by remember { mutableStateOf(progress.notificationsEnabled) }
+    var hour by remember { mutableIntStateOf(progress.reminderHour) }
+    var apiKey by remember { mutableStateOf(progress.geminiApiKey) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Text(
-            text = "लेखन कोच, सर्टिफिकेट और सेटिंग्स",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
+    val hourOptions = listOf(
+        8 to "8 AM",
+        14 to "2 PM",
+        19 to "7 PM",
+        21 to "9 PM"
+    )
 
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = subTab == 0, onClick = { subTab = 0 }, label = { Text("Email/Writing Coach") })
-            FilterChip(selected = subTab == 1, onClick = { subTab = 1 }, label = { Text("सर्टिफिकेट") })
-            FilterChip(selected = subTab == 2, onClick = { subTab = 2 }, label = { Text("Free AI Key & मदद") })
-        }
-
-        when (subTab) {
-            0 -> {
-                Text("रेडी-मेड टेम्पलेट चुनें या खुद लिखें:", style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    CurriculumRepository.writingTemplates.forEach { tpl ->
-                        OutlinedButton(onClick = {
-                            draft = tpl.draftText
-                            corrections = emptyList()
-                            aiRewrite = ""
-                        }) {
-                            Text(tpl.titleHi)
-                        }
-                    }
-                }
-
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "ऐप सेटिंग्स (Pro कंट्रोल)",
+                fontWeight = FontWeight.Bold,
+                color = EmeraldPrimary
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 OutlinedTextField(
-                    value = draft,
-                    onValueChange = { draft = it },
-                    label = { Text("ईमेल / एप्लीकेशन / वाक्य लिखें") },
-                    minLines = 5,
+                    value = nameInput,
+                    onValueChange = { nameInput = it },
+                    label = { Text("छात्र का नाम (सर्टिफिकेट के लिए)") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Button(
-                    onClick = {
-                        corrections = CurriculumRepository.analyzeWritingOffline(draft)
-                        onAddXp(15)
-                        if (progress.geminiApiKey.isNotBlank()) {
-                            isChecking = true
-                            scope.launch {
-                                val res = speechCoach.askFreeGeminiTutor(
-                                    progress.geminiApiKey,
-                                    "Fix grammar and polish this English text for a Hindi-medium student. First show the corrected English text, then explain the fixes in 2-3 short Hindi bullets:\n\n$draft"
-                                )
-                                isChecking = false
-                                aiRewrite = res.getOrElse { "" }
-                            }
-                        }
-                    },
-                    enabled = !isChecking && draft.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
+                HorizontalDivider(color = HairlineBorder)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(if (isChecking) "जाँच चल रही है..." else "गलतियाँ जांचें और सुधारें (+15 XP)")
-                }
-
-                corrections.forEach { item ->
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = CardSurface),
-                        border = BorderStroke(1.dp, HairlineBorder),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("पहचाना गया: ${item.original}", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
-                            Text("सही रूप ✅: ${item.corrected}", color = SuccessGreen, fontWeight = FontWeight.Bold)
-                            Text("क्यों: ${item.reasonHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
-                        }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("सही / गलत आवाज़", fontWeight = FontWeight.SemiBold)
+                        Text("उत्तर देने पर तुरंत टोन बजेगी", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
                     }
+                    Switch(checked = sound, onCheckedChange = { sound = it })
                 }
 
-                if (aiRewrite.isNotBlank()) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = EmeraldLight),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("AI बेहतर सुझाव:", fontWeight = FontWeight.Bold, color = EmeraldPrimary)
-                            Text(aiRewrite, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-            }
-
-            1 -> {
-                val unlocked = progress.xp >= 300
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = CardSurface),
-                    border = BorderStroke(2.dp, EmeraldPrimary),
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier.padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text("CERTIFICATE OF COMPLETION", style = MaterialTheme.typography.labelLarge, color = EmeraldPrimary, fontWeight = FontWeight.Bold)
-                        Text("English सीखो Pro · Hindi-to-English Foundation", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("यह प्रमाणित किया जाता है कि", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
-                        Text(progress.studentName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = EmeraldPrimary)
-                        Text("ने ${progress.level.titleHi} स्तर पर ${progress.xp} XP और ${progress.streakDays} दिन की नियमित प्रैक्टिस के साथ अपना अभ्यास जारी रखा।")
-                        Text(
-                            text = if (unlocked) "स्थिति: अनलॉक्ड ✅ (बधाई हो!)" else "स्थिति: ${300 - progress.xp} XP और कमाएं सर्टिफिकेट पक्का करने के लिए।",
-                            color = if (unlocked) SuccessGreen else MaterialTheme.colorScheme.secondary,
-                            fontWeight = FontWeight.Bold
-                        )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("वाइब्रेशन फीडबैक", fontWeight = FontWeight.SemiBold)
+                        Text("गलत और जीत पर हल्का वाइब्रेशन", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
                     }
+                    Switch(checked = vibration, onCheckedChange = { vibration = it })
                 }
 
-                Button(
-                    onClick = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                "मैं 'English सीखो Pro' 100% Native Android ऐप से English सीख रहा हूँ! मेरा स्कोर: ${progress.xp} XP (${progress.level.titleHi})।"
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("दैनिक व टास्क नोटिफिकेशन", fontWeight = FontWeight.SemiBold)
+                        Text("रोज़ अभ्यास याद दिलाने के लिए", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                    }
+                    Switch(checked = notify, onCheckedChange = { notify = it })
+                }
+
+                if (notify) {
+                    Text("दैनिक रिमाइंडर समय चुनें:", style = MaterialTheme.typography.labelMedium, color = SlateMuted)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        hourOptions.forEach { (h, label) ->
+                            FilterChip(
+                                selected = hour == h,
+                                onClick = { hour = h },
+                                label = { Text(label) }
                             )
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, "प्रगति शेयर करें"))
+                    }
+
+                    OutlinedButton(
+                        onClick = onSendTestNotification,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("टेस्ट नोटिफिकेशन भेजें")
+                    }
+                }
+
+                HorizontalDivider(color = HairlineBorder)
+
+                Text(
+                    text = "वैकल्पिक Free Gemini AI Key (बिल्कुल ज़रूरी नहीं — बाकी सब ऑफलाइन फ्री है):",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SlateMuted
+                )
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    label = { Text("Gemini API Key (AIza...)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedButton(
+                    onClick = {
+                        onDismiss()
+                        onRetakeLevelTest()
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("अपनी प्रगति शेयर करें")
+                    Text("लेवल जांच (Level Test) दोबारा दें")
                 }
             }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSaveAll(
+                        nameInput.trim().ifBlank { "विद्यार्थी" },
+                        sound,
+                        vibration,
+                        notify,
+                        hour,
+                        apiKey.trim()
+                    )
+                    onDismiss()
+                }
+            ) {
+                Text("सेव करें")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("बंद करें")
+            }
+        }
+    )
+}
 
-            else -> {
+@Composable
+fun CertificateAndRankDialog(
+    progress: UserProgress,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val unlocked = progress.xp >= 300
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "आपकी रैंक, बैज व सर्टिफिकेट",
+                fontWeight = FontWeight.Bold,
+                color = EmeraldPrimary
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = EmeraldLight),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("वर्तमान रैंक: ${progress.rankTitleHi()}", fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                        Text("कुल स्कोर: ${progress.xp} XP · ${progress.coins} Gold Coins", style = MaterialTheme.typography.bodySmall)
+                        Text("30-दिन कोर्स: ${progress.completedDayNumbers.size}/30 दिन पूर्ण", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                Text("अनलॉक किए गए बैज (Badges):", fontWeight = FontWeight.Bold)
+                if (progress.unlockedBadges.isEmpty()) {
+                    Text(
+                        text = "गेम ज़ोन में 'वाक्य पहेली', '60s मिलान' या 'Boss गेम' जीतकर अपने पहले बैज पाएं!",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SlateMuted
+                    )
+                } else {
+                    progress.unlockedBadges.forEach { badge ->
+                        Text("🏆 $badge", color = SuccessGreen, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
                 Card(
                     colors = CardDefaults.cardColors(containerColor = CardSurface),
-                    border = BorderStroke(1.dp, HairlineBorder),
+                    border = BorderStroke(1.5.dp, EmeraldPrimary),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("प्रोफ़ाइल और वैकल्पिक Free Gemini AI Key", fontWeight = FontWeight.Bold)
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("CERTIFICATE OF COMPLETION", style = MaterialTheme.typography.labelMedium, color = EmeraldPrimary, fontWeight = FontWeight.Bold)
+                        Text(progress.studentName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                        Text("ने ${progress.level.titleHi} स्तर पर ${progress.xp} XP के साथ अपना अभ्यास जारी रखा।", style = MaterialTheme.typography.bodySmall)
                         Text(
-                            text = "ध्यान दें: इस ऐप के 90% फीचर्स (Flashcards, Grammar, Stories, Mic Practice, Mistake Fixer) बिना किसी API Key और बिना इंटरनेट के 100% फ्री चलते हैं। अगर आप अनलिमिटेड AI चैट भी चाहते हैं, तो Google AI Studio से बिल्कुल फ्री Key लेकर नीचे डाल सकते हैं।",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = SlateMuted
+                            text = if (unlocked) "स्थिति: अनलॉक्ड ✅" else "सर्टिफिकेट पक्का करने के लिए ${300 - progress.xp} XP और कमाएं।",
+                            color = if (unlocked) SuccessGreen else SlateMuted,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodySmall
                         )
-
-                        OutlinedTextField(
-                            value = nameInput,
-                            onValueChange = { nameInput = it },
-                            label = { Text("आपका नाम") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        OutlinedTextField(
-                            value = keyInput,
-                            onValueChange = { keyInput = it },
-                            label = { Text("वैकल्पिक Free Gemini API Key") },
-                            placeholder = { Text("AIza... (खाली भी छोड़ सकते हैं)") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Button(
-                            onClick = {
-                                onSaveSettings(nameInput.trim().ifBlank { "विद्यार्थी" }, keyInput.trim())
-                                savedMsg = "सेटिंग्स सुरक्षित हो गईं!"
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("सेटिंग्स सेव करें")
-                        }
-
-                        if (savedMsg.isNotBlank()) {
-                            Text(savedMsg, color = SuccessGreen, fontWeight = FontWeight.SemiBold)
-                        }
                     }
                 }
             }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(
+                            Intent.EXTRA_TEXT,
+                            "मैं 'English सीखो Pro' ऐप से English सीख रहा हूँ! मेरी रैंक: ${progress.rankTitleHi()} (${progress.xp} XP, ${progress.coins} Coins)।"
+                        )
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "प्रगति शेयर करें"))
+                }
+            ) {
+                Text("शेयर करें")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("बंद करें")
+            }
         }
-    }
+    )
 }

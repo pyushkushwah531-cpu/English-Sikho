@@ -27,15 +27,21 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.englishseekho.pro.data.CurriculumRepository
+import com.englishseekho.pro.data.UserProgress
+import com.englishseekho.pro.data.WritingCorrection
+import com.englishseekho.pro.services.FeedbackManager
 import com.englishseekho.pro.services.SpeechCoach
 import com.englishseekho.pro.ui.theme.CardSurface
 import com.englishseekho.pro.ui.theme.EmeraldLight
@@ -46,17 +52,32 @@ import com.englishseekho.pro.ui.theme.HairlineBorder
 import com.englishseekho.pro.ui.theme.SlateMuted
 import com.englishseekho.pro.ui.theme.SuccessGreen
 import com.englishseekho.pro.ui.theme.SuccessSoft
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HindiBridgeAndGrammarScreen(
+    progress: UserProgress,
     speechCoach: SpeechCoach,
+    feedback: FeedbackManager,
+    initialSection: Int = 0,
     onAddXp: (Int) -> Unit
 ) {
-    var section by remember { mutableIntStateOf(0) } // 0 = Bridge Traps, 1 = Hinglish Converter, 2 = Visual Grammar
+    val scope = rememberCoroutineScope()
+    var section by remember { mutableIntStateOf(initialSection) } // 0 = Traps, 1 = Hinglish, 2 = Grammar, 3 = 50 Verb Forms, 4 = Writing Coach
+    LaunchedEffect(initialSection) {
+        section = initialSection
+    }
+
     var hinglishInput by remember { mutableStateOf(CurriculumRepository.sampleHinglishPresets.first()) }
     var converted by remember { mutableStateOf(CurriculumRepository.convertHinglishOffline(CurriculumRepository.sampleHinglishPresets.first())) }
     var grammarFilter by remember { mutableStateOf("सभी") }
+    var verbQuery by remember { mutableStateOf("") }
+
+    var draft by remember { mutableStateOf(CurriculumRepository.writingTemplates.last().draftText) }
+    var corrections by remember { mutableStateOf<List<WritingCorrection>>(emptyList()) }
+    var aiRewrite by remember { mutableStateOf("") }
+    var isChecking by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -66,20 +87,22 @@ fun HindiBridgeAndGrammarScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
-            text = "सोचो हिंदी में, बोलो English में",
+            text = "ग्रामर, Verb Forms और लेखन स्टूडियो",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "शब्द-दर-शब्द हिंदी अनुवाद की गलतियों से बचें और बिना रटे Visual Grammar सीखें।",
+            text = "अनुवाद की गलतियों से बचें, 50 मुख्य Verb Forms (V1-V2-V3) याद करें और अपने ईमेल सुधारें।",
             style = MaterialTheme.typography.bodySmall,
             color = SlateMuted
         )
 
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = section == 0, onClick = { section = 0 }, label = { Text("अनुवाद के जाल") })
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            FilterChip(selected = section == 0, onClick = { section = 0 }, label = { Text("अनुवाद के जाल (15)") })
             FilterChip(selected = section == 1, onClick = { section = 1 }, label = { Text("Hinglish ➔ Pro") })
             FilterChip(selected = section == 2, onClick = { section = 2 }, label = { Text("Visual Grammar") })
+            FilterChip(selected = section == 3, onClick = { section = 3 }, label = { Text("50 Verb Forms") })
+            FilterChip(selected = section == 4, onClick = { section = 4 }, label = { Text("Writing / Email") })
         }
 
         when (section) {
@@ -117,6 +140,7 @@ fun HindiBridgeAndGrammarScreen(
                         OutlinedButton(onClick = {
                             hinglishInput = preset
                             converted = CurriculumRepository.convertHinglishOffline(preset)
+                            feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
                             onAddXp(10)
                         }) {
                             Text(preset)
@@ -135,6 +159,7 @@ fun HindiBridgeAndGrammarScreen(
                     onClick = {
                         if (hinglishInput.isNotBlank()) {
                             converted = CurriculumRepository.convertHinglishOffline(hinglishInput)
+                            feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
                             onAddXp(10)
                         }
                     },
@@ -167,7 +192,7 @@ fun HindiBridgeAndGrammarScreen(
                 }
             }
 
-            else -> {
+            2 -> {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("सभी", "Tenses", "Prepositions", "Modals").forEach { cat ->
                         FilterChip(
@@ -205,6 +230,133 @@ fun HindiBridgeAndGrammarScreen(
                                 Spacer(Modifier.width(6.dp))
                                 Text("उदाहरण सुनें")
                             }
+                        }
+                    }
+                }
+            }
+
+            3 -> {
+                OutlinedTextField(
+                    value = verbQuery,
+                    onValueChange = { verbQuery = it },
+                    label = { Text("Verb खोजें (जैसे: Go, जाना, Eat...)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                val filteredVerbs = CurriculumRepository.verbForms.filter {
+                    val q = verbQuery.trim().lowercase()
+                    q.isBlank() || it.v1.lowercase().contains(q) || it.v2.lowercase().contains(q) || it.meaningHi.contains(q)
+                }
+
+                Text(
+                    text = "दिखाए गए: ${filteredVerbs.size} / ${CurriculumRepository.verbForms.size} मुख्य क्रियाएं",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = SlateMuted
+                )
+
+                filteredVerbs.forEach { v ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = CardSurface),
+                        border = BorderStroke(1.dp, HairlineBorder),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(
+                                    text = "${v.v1}  •  ${v.v2}  •  ${v.v3}",
+                                    fontWeight = FontWeight.Bold,
+                                    color = EmeraldPrimary
+                                )
+                                Text("उच्चारण: ${v.pronunciationHi}", style = MaterialTheme.typography.bodySmall)
+                                Text("हिंदी अर्थ: ${v.meaningHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                            }
+                            OutlinedButton(onClick = {
+                                speechCoach.speak("${v.v1}, ${v.v2}, ${v.v3}", 0.85f)
+                            }) {
+                                Icon(Icons.Rounded.VolumeUp, contentDescription = null)
+                            }
+                        }
+                    }
+                }
+            }
+
+            else -> {
+                Text("रेडी-मेड टेम्पलेट चुनें या खुद लिखें:", style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    CurriculumRepository.writingTemplates.forEach { tpl ->
+                        OutlinedButton(onClick = {
+                            draft = tpl.draftText
+                            corrections = emptyList()
+                            aiRewrite = ""
+                        }) {
+                            Text(tpl.titleHi)
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    label = { Text("ईमेल / एप्लीकेशन / वाक्य लिखें") },
+                    minLines = 5,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Button(
+                    onClick = {
+                        corrections = CurriculumRepository.analyzeWritingOffline(draft)
+                        feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
+                        onAddXp(15)
+                        if (progress.geminiApiKey.isNotBlank()) {
+                            isChecking = true
+                            scope.launch {
+                                val res = speechCoach.askFreeGeminiTutor(
+                                    progress.geminiApiKey,
+                                    "Fix grammar and polish this English text for a Hindi-medium student. First show the corrected English text, then explain the fixes in 2-3 short Hindi bullets:\n\n$draft"
+                                )
+                                isChecking = false
+                                aiRewrite = res.getOrElse { "" }
+                            }
+                        }
+                    },
+                    enabled = !isChecking && draft.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isChecking) "जाँच चल रही है..." else "गलतियाँ जांचें और सुधारें (+15 XP)")
+                }
+
+                corrections.forEach { item ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = CardSurface),
+                        border = BorderStroke(1.dp, HairlineBorder),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("पहचाना गया: ${item.original}", color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.SemiBold)
+                            Text("सही रूप ✅: ${item.corrected}", color = SuccessGreen, fontWeight = FontWeight.Bold)
+                            Text("क्यों: ${item.reasonHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                        }
+                    }
+                }
+
+                if (aiRewrite.isNotBlank()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = EmeraldLight),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("AI बेहतर सुझाव:", fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                            Text(aiRewrite, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }

@@ -3,6 +3,8 @@ package com.englishseekho.pro.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.englishseekho.pro.data.CurriculumRepository
+import com.englishseekho.pro.data.UserProgress
+import com.englishseekho.pro.services.FeedbackManager
 import com.englishseekho.pro.services.PronunciationResult
 import com.englishseekho.pro.services.SpeechCoach
 import com.englishseekho.pro.ui.theme.CardSurface
@@ -47,11 +51,12 @@ import com.englishseekho.pro.ui.theme.SlateMuted
 import com.englishseekho.pro.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SpeakingStudioScreen(
+    progress: UserProgress,
     speechCoach: SpeechCoach,
-    geminiApiKey: String,
+    feedback: FeedbackManager,
     hasMicPermission: Boolean,
     onRequestMicPermission: () -> Unit,
     onAddXp: (Int) -> Unit
@@ -91,18 +96,18 @@ fun SpeakingStudioScreen(
             FilterChip(
                 selected = mode == 0,
                 onClick = { mode = 0 },
-                label = { Text("AI Roleplay बातचीत") }
+                label = { Text("Roleplay बातचीत (5)") }
             )
             FilterChip(
                 selected = mode == 1,
                 onClick = { mode = 1 },
-                label = { Text("Pronunciation & Shadowing") }
+                label = { Text("Pronunciation (8)") }
             )
         }
 
         if (mode == 0) {
             val scenario = CurriculumRepository.roleplayScenarios[selectedScenarioIndex]
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 CurriculumRepository.roleplayScenarios.forEachIndexed { idx, item ->
                     FilterChip(
                         selected = selectedScenarioIndex == idx,
@@ -200,12 +205,13 @@ fun SpeakingStudioScreen(
                         Button(
                             onClick = {
                                 if (userReplyInput.isNotBlank()) {
+                                    feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
                                     onAddXp(15)
-                                    if (geminiApiKey.isNotBlank()) {
+                                    if (progress.geminiApiKey.isNotBlank()) {
                                         isAiLoading = true
                                         scope.launch {
                                             val res = speechCoach.askFreeGeminiTutor(
-                                                geminiApiKey,
+                                                progress.geminiApiKey,
                                                 "You are a friendly English tutor for a Hindi-medium student. Situation: ${scenario.titleHi}. Student replied: \"$userReplyInput\". Give a 2-line encouraging correction in simple Hindi + improved English sentence."
                                             )
                                             isAiLoading = false
@@ -292,9 +298,18 @@ fun SpeakingStudioScreen(
                                         val res = speechCoach.evaluatePronunciation(drill.sentenceEn, spoken)
                                         pronResult = res
                                         micStatus = ""
-                                        onAddXp(15)
+                                        if (res.accuracyPercent >= 60) {
+                                            feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
+                                            onAddXp(15)
+                                        } else {
+                                            feedback.playWrong(progress.soundEnabled, progress.vibrationEnabled)
+                                            onAddXp(5)
+                                        }
                                     },
-                                    onError = { err -> micStatus = err }
+                                    onError = { err ->
+                                        micStatus = err
+                                        feedback.playWrong(progress.soundEnabled, progress.vibrationEnabled)
+                                    }
                                 )
                             }
                         },

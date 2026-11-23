@@ -39,6 +39,36 @@ data class DailyUseSentence(
     val hindi: String
 )
 
+data class VerbFormItem(
+    val v1: String,
+    val v2: String,
+    val v3: String,
+    val pronunciationHi: String,
+    val meaningHi: String
+)
+
+data class IdiomItem(
+    val idiomEn: String,
+    val meaningHi: String,
+    val exampleEn: String,
+    val exampleHi: String
+)
+
+data class SentencePuzzleItem(
+    val id: String,
+    val hindiPrompt: String,
+    val correctWords: List<String>,
+    val hintHi: String
+)
+
+data class BossQuestionItem(
+    val promptHi: String,
+    val questionEn: String,
+    val options: List<String>,
+    val correctIndex: Int,
+    val explanationHi: String
+)
+
 data class RoleplayTurn(
     val speaker: String,
     val englishText: String,

@@ -41,10 +41,12 @@ import androidx.compose.ui.unit.dp
 import com.englishseekho.pro.data.CurriculumRepository
 import com.englishseekho.pro.data.GlossaryWord
 import com.englishseekho.pro.data.UserProgress
+import com.englishseekho.pro.services.FeedbackManager
 import com.englishseekho.pro.services.SpeechCoach
 import com.englishseekho.pro.ui.theme.CardSurface
 import com.englishseekho.pro.ui.theme.EmeraldLight
 import com.englishseekho.pro.ui.theme.EmeraldPrimary
+import com.englishseekho.pro.ui.theme.ErrorRed
 import com.englishseekho.pro.ui.theme.HairlineBorder
 import com.englishseekho.pro.ui.theme.SlateMuted
 import com.englishseekho.pro.ui.theme.SuccessGreen
@@ -54,10 +56,11 @@ import com.englishseekho.pro.ui.theme.SuccessGreen
 fun VocabAndStoriesScreen(
     progress: UserProgress,
     speechCoach: SpeechCoach,
+    feedback: FeedbackManager,
     onMarkWord: (wordId: String, mastered: Boolean) -> Unit,
     onAddXp: (Int) -> Unit
 ) {
-    var tab by remember { mutableIntStateOf(0) } // 0 = Flashcards, 1 = Daily Sentences, 2 = Confusing Words, 3 = Tap Stories
+    var tab by remember { mutableIntStateOf(0) } // 0 = Flashcards, 1 = Daily Sentences, 2 = Confusing Words, 3 = Tap Stories, 4 = Idioms
     var cardIndex by remember { mutableIntStateOf(0) }
     var isFlipped by remember { mutableStateOf(false) }
 
@@ -77,16 +80,17 @@ fun VocabAndStoriesScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
-            text = "शब्दावली, रोज़ के वाक्य और कहानियाँ",
+            text = "शब्दावली, मुहावरे, वाक्य और कहानियाँ",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
 
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("30 Flashcards") })
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("रोज़ के वाक्य") })
-            FilterChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text("Confusing Words") })
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("40 Flashcards") })
+            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("रोज़ के वाक्य (28)") })
+            FilterChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text("Confusing Quiz") })
             FilterChip(selected = tab == 3, onClick = { tab = 3 }, label = { Text("6 कहानियाँ") })
+            FilterChip(selected = tab == 4, onClick = { tab = 4 }, label = { Text("12 मुहावरे (Idioms)") })
         }
 
         when (tab) {
@@ -140,6 +144,7 @@ fun VocabAndStoriesScreen(
                     Button(
                         onClick = {
                             onMarkWord(card.id, true)
+                            feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
                             onAddXp(10)
                             isFlipped = false
                             cardIndex = (cardIndex + 1) % CurriculumRepository.flashcards.size
@@ -202,7 +207,12 @@ fun VocabAndStoriesScreen(
                                     onClick = {
                                         if (quizChoice.isBlank()) {
                                             quizChoice = opt
-                                            if (opt == q.correctWord) onAddXp(15)
+                                            if (opt == q.correctWord) {
+                                                feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
+                                                onAddXp(15)
+                                            } else {
+                                                feedback.playWrong(progress.soundEnabled, progress.vibrationEnabled)
+                                            }
                                         }
                                     },
                                     modifier = Modifier.weight(1f)
@@ -213,8 +223,8 @@ fun VocabAndStoriesScreen(
                         if (quizChoice.isNotBlank()) {
                             val ok = quizChoice == q.correctWord
                             Text(
-                                text = if (ok) "बिल्कुल सही! (+15 XP) ${q.explanationHi}" else "सही शब्द '${q.correctWord}' है। ${q.explanationHi}",
-                                color = if (ok) SuccessGreen else MaterialTheme.colorScheme.secondary,
+                                text = if (ok) "बिल्कुल सही! (+15 XP) ${q.explanationHi}" else "गलत ❌ — सही शब्द '${q.correctWord}' है। ${q.explanationHi}",
+                                color = if (ok) SuccessGreen else ErrorRed,
                                 fontWeight = FontWeight.Medium
                             )
                             Button(
@@ -229,7 +239,7 @@ fun VocabAndStoriesScreen(
                 }
             }
 
-            else -> {
+            3 -> {
                 val story = CurriculumRepository.stories[storyIndex]
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CurriculumRepository.stories.forEachIndexed { idx, _ ->
@@ -281,6 +291,29 @@ fun VocabAndStoriesScreen(
 
                         Card(colors = CardDefaults.cardColors(containerColor = EmeraldLight), modifier = Modifier.fillMaxWidth()) {
                             Text("कहानी का सार: ${story.summaryHi}", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+
+            else -> {
+                CurriculumRepository.idioms.forEach { item ->
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = CardSurface),
+                        border = BorderStroke(1.dp, HairlineBorder),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(item.idiomEn, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                            Text("अर्थ: ${item.meaningHi}", fontWeight = FontWeight.SemiBold)
+                            Text("उदाहरण: ${item.exampleEn}", style = MaterialTheme.typography.bodyMedium)
+                            Text("अनुवाद: ${item.exampleHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                            OutlinedButton(onClick = { speechCoach.speak("${item.idiomEn}. ${item.exampleEn}", 0.9f) }) {
+                                Icon(Icons.Rounded.VolumeUp, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("उच्चारण सुनें")
+                            }
                         }
                     }
                 }

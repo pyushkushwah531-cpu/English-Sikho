@@ -18,10 +18,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.MonetizationOn
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -48,11 +51,13 @@ import androidx.compose.ui.unit.dp
 import com.englishseekho.pro.data.CurriculumRepository
 import com.englishseekho.pro.data.StudentLevel
 import com.englishseekho.pro.data.UserProgress
+import com.englishseekho.pro.services.FeedbackManager
 import com.englishseekho.pro.services.SpeechCoach
 import com.englishseekho.pro.ui.theme.AmberAccent
 import com.englishseekho.pro.ui.theme.CardSurface
 import com.englishseekho.pro.ui.theme.EmeraldLight
 import com.englishseekho.pro.ui.theme.EmeraldPrimary
+import com.englishseekho.pro.ui.theme.ErrorRed
 import com.englishseekho.pro.ui.theme.HairlineBorder
 import com.englishseekho.pro.ui.theme.SlateMuted
 import com.englishseekho.pro.ui.theme.SuccessGreen
@@ -60,6 +65,9 @@ import com.englishseekho.pro.ui.theme.SuccessGreen
 @Composable
 fun LevelTestScreen(
     initialName: String,
+    feedback: FeedbackManager,
+    soundEnabled: Boolean,
+    vibrationEnabled: Boolean,
     onComplete: (name: String, level: StudentLevel, bonusXp: Int) -> Unit
 ) {
     val questions = CurriculumRepository.levelTestQuestions
@@ -146,7 +154,7 @@ fun LevelTestScreen(
                     val isCorrect = idx == q.correctIndex
                     val borderColor = when {
                         showFeedback && isCorrect -> SuccessGreen
-                        showFeedback && isSelected && !isCorrect -> MaterialTheme.colorScheme.error
+                        showFeedback && isSelected && !isCorrect -> ErrorRed
                         isSelected -> EmeraldPrimary
                         else -> HairlineBorder
                     }
@@ -155,7 +163,12 @@ fun LevelTestScreen(
                             if (!showFeedback) {
                                 selectedOption = idx
                                 showFeedback = true
-                                if (idx == q.correctIndex) score += 1
+                                if (idx == q.correctIndex) {
+                                    score += 1
+                                    feedback.playCorrect(soundEnabled, vibrationEnabled)
+                                } else {
+                                    feedback.playWrong(soundEnabled, vibrationEnabled)
+                                }
                             }
                         },
                         border = BorderStroke(1.5.dp, borderColor),
@@ -187,6 +200,7 @@ fun LevelTestScreen(
                                 selectedOption = -1
                                 showFeedback = false
                             } else {
+                                feedback.playCelebration(soundEnabled, vibrationEnabled)
                                 val finalLevel = when {
                                     score >= 4 -> StudentLevel.PRO
                                     score >= 2 -> StudentLevel.INTERMEDIATE
@@ -224,6 +238,8 @@ fun HomeDashboardScreen(
     onToggleTask: (String, Int) -> Unit,
     onToggleCourseDay: (Int) -> Unit,
     onNavigateTab: (Int) -> Unit,
+    onOpenWritingCoach: () -> Unit,
+    onOpenCertificateDialog: () -> Unit,
     onRetakeLevelTest: () -> Unit
 ) {
     val tasks = CurriculumRepository.dailyTasks
@@ -244,6 +260,7 @@ fun HomeDashboardScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Rank + Coins + Streak Hero Card
         Card(
             colors = CardDefaults.cardColors(containerColor = EmeraldPrimary),
             shape = RoundedCornerShape(20.dp),
@@ -260,9 +277,10 @@ fun HomeDashboardScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${progress.level.titleHi} · ${progress.level.descriptionHi}",
+                    text = "रैंक: ${progress.rankTitleHi()} · ${progress.level.titleHi}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = EmeraldLight
+                    color = EmeraldLight,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -271,15 +289,45 @@ fun HomeDashboardScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = EmeraldLight)
-                        Spacer(Modifier.width(6.dp))
-                        Text("${progress.streakDays} दिन Streak", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.width(4.dp))
+                        Text("${progress.streakDays} दिन", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.MonetizationOn, contentDescription = null, tint = EmeraldLight)
+                        Spacer(Modifier.width(4.dp))
+                        Text("${progress.coins} Coins", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = EmeraldLight)
-                        Spacer(Modifier.width(6.dp))
-                        Text("${progress.xp} XP · ${progress.completedDayNumbers.size}/30 दिन", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
+                        Spacer(Modifier.width(4.dp))
+                        Text("${progress.xp} XP", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
                     }
                 }
+            }
+        }
+
+        // Quick Action Gaming & Writing Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Button(
+                onClick = { onNavigateTab(1) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Rounded.SportsEsports, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("गेम ज़ोन खेलें", maxLines = 1)
+            }
+            OutlinedButton(
+                onClick = onOpenWritingCoach,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Rounded.EditNote, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Writing Coach", maxLines = 1)
             }
         }
 
@@ -367,7 +415,7 @@ fun HomeDashboardScreen(
                     onClick = { onToggleCourseDay(activeDay.dayNumber) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (dayDone) "पूर्ण हो गया ✅ (बदलें)" else "दिन ${activeDay.dayNumber} पूरा करें (+20 XP)")
+                    Text(if (dayDone) "पूर्ण हो गया ✅ (बदलें)" else "दिन ${activeDay.dayNumber} पूरा करें (+20 XP +10 Coins)")
                 }
             }
         }
@@ -376,7 +424,9 @@ fun HomeDashboardScreen(
             colors = CardDefaults.cardColors(containerColor = CardSurface),
             border = BorderStroke(1.dp, HairlineBorder),
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onOpenCertificateDialog() }
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -387,7 +437,7 @@ fun HomeDashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("डिजिटल सर्टिफिकेट प्रगति", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text("डिजिटल सर्टिफिकेट व बैज (${progress.unlockedBadges.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                     Text("${progress.xp.coerceAtMost(500)} / 500 XP", style = MaterialTheme.typography.labelMedium, color = EmeraldPrimary, fontWeight = FontWeight.Bold)
                 }
                 LinearProgressIndicator(
@@ -396,7 +446,7 @@ fun HomeDashboardScreen(
                     color = EmeraldPrimary
                 )
                 Text(
-                    text = if (progress.xp >= 500) "बधाई हो! आपका सर्टिफिकेट 'लिखें' टैब में तैयार है।" else "रोज़ के 10 मिनट और 30-दिन का कोर्स पूरा करके सर्टिफिकेट अनलॉक करें।",
+                    text = if (progress.xp >= 500) "बधाई हो! सर्टिफिकेट देखने के लिए यहाँ टैप करें (या ऊपर 🏆 दबाएं)।" else "रैंक, बैज और सर्टिफिकेट देखने के लिए टैप करें।",
                     style = MaterialTheme.typography.bodySmall,
                     color = SlateMuted
                 )
