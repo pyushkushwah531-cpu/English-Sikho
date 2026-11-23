@@ -14,14 +14,119 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Auto-organize Android folders if uploaded flat
+        run: |
+          if [ ! -f "app/src/main/AndroidManifest.xml" ] && [ -f "AndroidManifest.xml" ]; then
+            echo "Organizing flat files into Android folders..."
+            mkdir -p app/src/main/java/com/englishseekho/pro/data
+            mkdir -p app/src/main/java/com/englishseekho/pro/services
+            mkdir -p app/src/main/java/com/englishseekho/pro/notifications
+            mkdir -p app/src/main/java/com/englishseekho/pro/widget
+            mkdir -p app/src/main/java/com/englishseekho/pro/ui/theme
+            mkdir -p app/src/main/java/com/englishseekho/pro/ui/screens
+            mkdir -p app/src/main/res/values
+            mkdir -p app/src/main/res/drawable
+            mkdir -p app/src/main/res/mipmap-anydpi-v26
+            mkdir -p app/src/main/res/layout
+            mkdir -p app/src/main/res/xml
+
+            mv AndroidManifest.xml app/src/main/
+            [ -f proguard-rules.pro ] && mv proguard-rules.pro app/ || true
+            mv Models.kt CurriculumRepository.kt LocalProgressStore.kt app/src/main/java/com/englishseekho/pro/data/
+            mv SpeechCoach.kt app/src/main/java/com/englishseekho/pro/services/
+            [ -f FeedbackManager.kt ] && mv FeedbackManager.kt app/src/main/java/com/englishseekho/pro/services/ || true
+            [ -f NotificationHelper.kt ] && mv NotificationHelper.kt app/src/main/java/com/englishseekho/pro/notifications/ || true
+            [ -f DailyReminderReceiver.kt ] && mv DailyReminderReceiver.kt app/src/main/java/com/englishseekho/pro/notifications/ || true
+            mv WordOfDayWidgetProvider.kt app/src/main/java/com/englishseekho/pro/widget/
+            mv Theme.kt app/src/main/java/com/englishseekho/pro/ui/theme/
+            mv HomeAndPlanScreens.kt SpeakingStudioScreen.kt HindiBridgeAndGrammarScreen.kt VocabAndStoriesScreen.kt WritingCertificateSettingsScreen.kt app/src/main/java/com/englishseekho/pro/ui/screens/
+            [ -f GameZoneScreen.kt ] && mv GameZoneScreen.kt app/src/main/java/com/englishseekho/pro/ui/screens/ || true
+            mv MainActivity.kt app/src/main/java/com/englishseekho/pro/
+
+            mv strings.xml colors.xml themes.xml app/src/main/res/values/
+            mv ic_launcher_foreground.xml ic_launcher_background.xml app/src/main/res/drawable/
+            mv ic_launcher.xml ic_launcher_round.xml app/src/main/res/mipmap-anydpi-v26/
+            mv widget_word_of_day.xml app/src/main/res/layout/
+            mv word_widget_info.xml app/src/main/res/xml/
+
+            printf '%s\n' \
+              'plugins {' \
+              '    id("com.android.application") version "8.5.2" apply false' \
+              '    id("org.jetbrains.kotlin.android") version "1.9.24" apply false' \
+              '}' > build.gradle.kts
+
+            printf '%s\n' \
+              'plugins {' \
+              '    id("com.android.application")' \
+              '    id("org.jetbrains.kotlin.android")' \
+              '}' \
+              'android {' \
+              '    namespace = "com.englishseekho.pro"' \
+              '    compileSdk = 34' \
+              '    defaultConfig {' \
+              '        applicationId = "com.englishseekho.pro"' \
+              '        minSdk = 24' \
+              '        targetSdk = 34' \
+              '        versionCode = 3' \
+              '        versionName = "1.2.0"' \
+              '        vectorDrawables { useSupportLibrary = true }' \
+              '    }' \
+              '    signingConfigs {' \
+              '        create("release") {' \
+              '            val keystorePath = System.getenv("KEYSTORE_FILE")' \
+              '            if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {' \
+              '                storeFile = file(keystorePath)' \
+              '                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""' \
+              '                keyAlias = System.getenv("KEY_ALIAS") ?: ""' \
+              '                keyPassword = System.getenv("KEY_PASSWORD") ?: ""' \
+              '            }' \
+              '        }' \
+              '    }' \
+              '    buildTypes {' \
+              '        release {' \
+              '            isMinifyEnabled = false' \
+              '            val releaseConfig = signingConfigs.findByName("release")' \
+              '            if (releaseConfig?.storeFile != null) { signingConfig = releaseConfig }' \
+              '            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")' \
+              '        }' \
+              '    }' \
+              '    compileOptions {' \
+              '        sourceCompatibility = JavaVersion.VERSION_17' \
+              '        targetCompatibility = JavaVersion.VERSION_17' \
+              '    }' \
+              '    kotlinOptions { jvmTarget = "17" }' \
+              '    buildFeatures { compose = true }' \
+              '    composeOptions { kotlinCompilerExtensionVersion = "1.5.14" }' \
+              '    packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }' \
+              '}' \
+              'dependencies {' \
+              '    implementation("androidx.core:core-ktx:1.13.1")' \
+              '    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")' \
+              '    implementation("androidx.activity:activity-compose:1.9.0")' \
+              '    implementation(platform("androidx.compose:compose-bom:2024.06.00"))' \
+              '    implementation("androidx.compose.ui:ui")' \
+              '    implementation("androidx.compose.ui:ui-graphics")' \
+              '    implementation("androidx.compose.ui:ui-tooling-preview")' \
+              '    implementation("androidx.compose.material3:material3")' \
+              '    implementation("androidx.compose.material:material-icons-extended")' \
+              '    implementation("androidx.navigation:navigation-compose:2.7.7")' \
+              '    debugImplementation("androidx.compose.ui:ui-tooling")' \
+              '}' > app/build.gradle.kts
+          fi
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK Licenses & Setup SDK 34
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER=$(command -v sdkmanager || find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -n 1)
+          echo "Using sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
       - name: Setup Gradle 8.7
         uses: gradle/actions/setup-gradle@v4
@@ -29,7 +134,6 @@ jobs:
           gradle-version: '8.7'
 
       - name: Prepare Release Keystore (Secrets or Auto-Generated)
-        id: keystore
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
@@ -37,7 +141,6 @@ jobs:
             echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
             echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
             echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
-            echo "Using permanent GitHub Secret keystore."
           else
             keytool -genkeypair -v -keystore release.jks -alias englishseekho \
               -keyalg RSA -keysize 2048 -validity 10000 \
@@ -47,7 +150,6 @@ jobs:
             echo "KEYSTORE_PASSWORD=Seekho@2026" >> $GITHUB_ENV
             echo "KEY_ALIAS=englishseekho" >> $GITHUB_ENV
             echo "KEY_PASSWORD=Seekho@2026" >> $GITHUB_ENV
-            echo "Generated release keystore for immediate Vivo/Indus testing."
           fi
 
       - name: Build Debug & Signed Release APKs
