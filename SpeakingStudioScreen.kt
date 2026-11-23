@@ -298,7 +298,8 @@ fun SpeakingStudioScreen(
                                         val res = speechCoach.evaluatePronunciation(drill.sentenceEn, spoken)
                                         pronResult = res
                                         micStatus = ""
-                                        if (res.accuracyPercent >= 60) {
+                                        val pct = if (res.totalWords == 0) 0 else (res.matchedWords * 100) / res.totalWords
+                                        if (pct >= 60) {
                                             feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
                                             onAddXp(15)
                                         } else {

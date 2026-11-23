@@ -152,7 +152,7 @@ fun GameZoneScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun SentenceBuilderGame(
     progress: UserProgress,
