@@ -660,7 +660,7 @@ private fun SplashIntroScreen() {
                 trackColor = Color(0x33FFFFFF)
             )
             Text(
-                text = "v1.3 · 100% ऑफलाइन तैयार",
+                text = "v1.3.1 · 100% ऑफलाइन तैयार",
                 style = MaterialTheme.typography.labelMedium,
                 color = EmeraldLight
             )

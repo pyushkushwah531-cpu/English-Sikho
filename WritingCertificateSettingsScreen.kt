@@ -8,6 +8,7 @@ import android.graphics.Color as AndroidColor
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -81,6 +82,7 @@ fun SettingsAlertDialog(
     var apiKey by remember { mutableStateOf(progress.geminiApiKey) }
     var showAdvanced by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     val hourOptions = listOf(
         8 to "8 AM",
@@ -177,7 +179,7 @@ fun SettingsAlertDialog(
                     onClick = { showPrivacyDialog = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Privacy Policy व ऐप जानकारी (v1.3)")
+                    Text("Privacy Policy व ऐप जानकारी (v1.3.1)")
                 }
 
                 OutlinedButton(
@@ -252,7 +254,7 @@ fun SettingsAlertDialog(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("ऐप: English सीखो Pro (v1.3.0)", fontWeight = FontWeight.Bold)
+                    Text("ऐप: English सीखो Pro (v1.3.1)", fontWeight = FontWeight.Bold)
                     Text("Package ID: com.englishseekho.pro", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
                     HorizontalDivider(color = HairlineBorder)
                     Text("1. आपका सारा डेटा आपके फोन में सुरक्षित:", fontWeight = FontWeight.SemiBold)
@@ -272,6 +274,26 @@ fun SettingsAlertDialog(
                     )
                     Text("4. संपर्क व सहायता:", fontWeight = FontWeight.SemiBold)
                     Text("ईमेल: pyushkushwah531@gmail.com", style = MaterialTheme.typography.bodySmall, color = EmeraldPrimary)
+                    Text("5. ऑनलाइन Privacy Policy लिंक:", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "https://pyushkushwah531-cpu.github.io/English-Sikho/privacy.html",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = EmeraldPrimary
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            runCatching {
+                                val intent = Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://pyushkushwah531-cpu.github.io/English-Sikho/privacy.html")
+                                )
+                                context.startActivity(intent)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("ऑनलाइन Privacy Policy खोलें 🌐")
+                    }
                 }
             },
             confirmButton = {

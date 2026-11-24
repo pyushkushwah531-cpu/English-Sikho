@@ -122,13 +122,14 @@ fun GameZoneScreen(
         }
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val matchStages = (CurriculumRepository.wordMatchPairs.size / 5).coerceAtLeast(1)
             FilterChip(
                 selected = gameMode == 0,
                 onClick = {
                     feedback.playTap(progress.vibrationEnabled)
                     onSelectMode(0)
                 },
-                label = { Text("वाक्य पहेली (50 लेवल)") }
+                label = { Text("वाक्य पहेली (${CurriculumRepository.sentencePuzzles.size})") }
             )
             FilterChip(
                 selected = gameMode == 1,
@@ -136,7 +137,7 @@ fun GameZoneScreen(
                     feedback.playTap(progress.vibrationEnabled)
                     onSelectMode(1)
                 },
-                label = { Text("60s मिलान (8 स्टेज)") }
+                label = { Text("60s मिलान ($matchStages स्टेज)") }
             )
             FilterChip(
                 selected = gameMode == 2,
@@ -144,7 +145,7 @@ fun GameZoneScreen(
                     feedback.playTap(progress.vibrationEnabled)
                     onSelectMode(2)
                 },
-                label = { Text("Boss गेम (40 लेवल)") }
+                label = { Text("Boss गेम (${CurriculumRepository.bossQuestions.size})") }
             )
             FilterChip(
                 selected = gameMode == 3,
@@ -152,7 +153,7 @@ fun GameZoneScreen(
                     feedback.playTap(progress.vibrationEnabled)
                     onSelectMode(3)
                 },
-                label = { Text("सुनो और चुनो (28)") }
+                label = { Text("सुनो और चुनो (${CurriculumRepository.listeningSentences.size})") }
             )
         }
 
@@ -471,15 +472,16 @@ private fun WordMatchSpeedGame(
     onUpdateWordMatchBatch: (Int) -> Unit,
     onRewardEarned: (Int, Int, String?, String?, String?) -> Unit
 ) {
-    val totalBatches = (CurriculumRepository.flashcards.size / 5).coerceAtLeast(1)
+    val wordBank = CurriculumRepository.wordMatchPairs
+    val totalBatches = (wordBank.size / 5).coerceAtLeast(1)
     var batchIndex by remember {
         mutableIntStateOf(progress.wordMatchBatchIndex.coerceIn(0, totalBatches - 1))
     }
     val batchStart = batchIndex * 5
 
     val cards = remember(batchIndex) {
-        val total = CurriculumRepository.flashcards.size
-        List(5) { idx -> CurriculumRepository.flashcards[(batchStart + idx) % total] }
+        val total = wordBank.size
+        List(5) { idx -> wordBank[(batchStart + idx) % total] }
     }
     val shuffledHindi = remember(batchIndex) { cards.shuffled() }
 
@@ -856,7 +858,7 @@ private fun ListeningChallengeGame(
     onUpdateListeningProgress: (Int, Int) -> Unit,
     onRewardEarned: (Int, Int, String?, String?, String?) -> Unit
 ) {
-    val sentences = CurriculumRepository.dailyUseSentences
+    val sentences = CurriculumRepository.listeningSentences
     var lIndex by remember {
         mutableIntStateOf(progress.listeningLevelIndex.coerceIn(0, sentences.lastIndex))
     }
@@ -996,7 +998,9 @@ private fun ListeningChallengeGame(
                             fontWeight = FontWeight.Bold
                         )
                         Text("अंग्रेज़ी वाक्य: ${target.english}", fontWeight = FontWeight.SemiBold)
-                        Text("उच्चारण: ${target.pronunciationHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                        if (target.pronunciationHi.isNotBlank()) {
+                            Text("उच्चारण: ${target.pronunciationHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                        }
                     }
                 }
                 Button(

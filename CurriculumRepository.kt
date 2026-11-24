@@ -1,5 +1,25 @@
 package com.englishseekho.pro.data
 
+private data class PuzzleSubject(
+    val en: String,
+    val hi: String,
+    val hiKo: String,
+    val isThirdSingular: Boolean,
+    val gender: Char, // 'M', 'F', 'P'
+    val beEn: String,
+    val wantEn: String
+)
+
+private data class PuzzleAction(
+    val v1: String,
+    val v1s: String,
+    val ving: String,
+    val objWords: List<String>,
+    val objHi: String,
+    val stemHi: String,
+    val infHi: String
+)
+
 object CurriculumRepository {
 
     val levelTestQuestions = listOf(
@@ -53,7 +73,7 @@ object CurriculumRepository {
         DayCourseLesson(30, "सप्ताह 4: जॉब और प्रोफेशनल इंग्लिश", "दिन 30: ग्रैंड रिव्यू व भविष्य का संकल्प", "30 दिन पूरे! अब धाराप्रवाह बोलने का नया सफर।", listOf("I have completed the thirty-day English foundation." to "मैंने तीस दिन की अंग्रेज़ी नींव पूरी कर ली है।", "English is no longer a barrier for my dreams." to "अंग्रेज़ी अब मेरे सपनों के आड़े नहीं आती।", "I will keep reading and speaking every day." to "मैं हर दिन पढ़ना और बोलना जारी रखूँगा।"), "बधाई हो! रोज़ 10 मिनट इस ऐप की कहानियाँ और Flashcards दोहराते रहें।")
     )
 
-    val sentencePuzzles = listOf(
+    private val coreSentencePuzzles = listOf(
         SentencePuzzleItem("sp1", "मैं रोज़ स्कूल जाता हूँ।", listOf("I", "go", "to", "school", "daily"), "पहले कर्ता (I) फिर क्रिया (go) लगाएं।"),
         SentencePuzzleItem("sp2", "मुझे अभी भूख लगी है।", listOf("I", "am", "hungry", "right", "now"), "'I have hunger' नहीं — 'I am hungry' चुनें।"),
         SentencePuzzleItem("sp3", "कल वह घर नहीं आया।", listOf("He", "did", "not", "come", "yesterday"), "'did not' के साथ V1 (come) आएगा।"),
@@ -106,7 +126,11 @@ object CurriculumRepository {
         SentencePuzzleItem("sp50", "अब मुझे बोलने से डर नहीं लगता।", listOf("Now", "I", "speak", "without", "fear"), "बिना डर के = 'without fear'!")
     )
 
-    val bossQuestions = listOf(
+    val sentencePuzzles: List<SentencePuzzleItem> by lazy {
+        coreSentencePuzzles + buildExtraSentencePuzzles()
+    }
+
+    private val coreBossQuestions = listOf(
         BossQuestionItem("गलती सुधारें: 'कल मैं बाज़ार नहीं गया'", "Yesterday I did not ___ to the market.", listOf("went", "go", "going", "gone"), 1, "'did not' के बाद हमेशा पहला रूप (go) आता है।"),
         BossQuestionItem("सही Preposition चुनें:", "The train arrives ___ 6:30 PM.", listOf("in", "on", "at", "by"), 2, "घड़ी के सटीक समय के लिए हमेशा 'at' लगता है।"),
         BossQuestionItem("हिंदी सोच सुधारें: 'वो मेरा चचेरा भाई है'", "He is my ___.", listOf("cousin brother", "cousin", "cousin boy", "brother cousin"), 1, "'Cousin' के पीछे brother/sister नहीं लगाते।"),
@@ -148,6 +172,10 @@ object CurriculumRepository {
         BossQuestionItem("तारीफ़ करना (Compliment):", "He gave me a warm ___ on my speech.", listOf("complement", "compliment", "complain", "complete"), 1, "तारीफ़ करने के लिए 'i' वाला 'Compliment' आता है।"),
         BossQuestionItem("देर रात तक मेहनत (Idiom):", "'Burn the midnight oil' का क्या अर्थ है?", listOf("तेल जलाना", "देर रात तक मेहनत करना", "जल्दी सो जाना", "बिना सोचे बोलना"), 1, "'Burn the midnight oil' यानी देर रात तक लगन से पढ़ाई/काम करना।")
     )
+
+    val bossQuestions: List<BossQuestionItem> by lazy {
+        coreBossQuestions + buildExtraBossQuestions()
+    }
 
     val verbForms = listOf(
         VerbFormItem("Go", "Went", "Gone", "गो - वेंट - गॉन", "जाना"),
@@ -584,5 +612,273 @@ object CurriculumRepository {
             "कभी भी 'No questions' न बोलें — यह सवाल आपकी गंभीरता और रुचि दिखाता है।"
         )
     )
+
+    val wordMatchPairs: List<FlashcardItem> by lazy { buildWordMatchPairs() }
+
+    val listeningSentences: List<DailyUseSentence> by lazy { buildListeningSentences() }
+
+    private fun buildExtraSentencePuzzles(): List<SentencePuzzleItem> {
+        val subjects = listOf(
+            PuzzleSubject("I", "मैं", "मुझे", false, 'M', "am", "want"),
+            PuzzleSubject("We", "हम", "हमें", false, 'P', "are", "want"),
+            PuzzleSubject("They", "वे", "उन्हें", false, 'P', "are", "want"),
+            PuzzleSubject("You", "आप", "आपको", false, 'P', "are", "want"),
+            PuzzleSubject("He", "वह", "उसे", true, 'M', "is", "wants"),
+            PuzzleSubject("She", "वह", "उसे", true, 'F', "is", "wants")
+        )
+        val actions = listOf(
+            PuzzleAction("read", "reads", "reading", listOf("books"), "किताबें", "पढ़", "पढ़ना"),
+            PuzzleAction("write", "writes", "writing", listOf("letters"), "पत्र", "लिख", "लिखना"),
+            PuzzleAction("learn", "learns", "learning", listOf("English"), "अंग्रेज़ी", "सीख", "सीखना"),
+            PuzzleAction("drink", "drinks", "drinking", listOf("water"), "पानी", "पी", "पीना"),
+            PuzzleAction("eat", "eats", "eating", listOf("fruits"), "फल", "खा", "खाना"),
+            PuzzleAction("speak", "speaks", "speaking", listOf("the", "truth"), "सच", "बोल", "बोलना"),
+            PuzzleAction("help", "helps", "helping", listOf("friends"), "दोस्तों की मदद", "कर", "करना"),
+            PuzzleAction("finish", "finishes", "finishing", listOf("homework"), "होमवर्क", "पूरा कर", "पूरा करना"),
+            PuzzleAction("clean", "cleans", "cleaning", listOf("the", "room"), "कमरा", "साफ़ कर", "साफ़ करना"),
+            PuzzleAction("watch", "watches", "watching", listOf("news"), "समाचार", "देख", "देखना"),
+            PuzzleAction("buy", "buys", "buying", listOf("vegetables"), "सब्ज़ियाँ", "खरीद", "खरीदना"),
+            PuzzleAction("play", "plays", "playing", listOf("cricket"), "क्रिकेट", "खेल", "खेलना"),
+            PuzzleAction("save", "saves", "saving", listOf("money"), "पैसा", "बचा", "बचाना"),
+            PuzzleAction("teach", "teaches", "teaching", listOf("children"), "बच्चों को", "पढ़ा", "पढ़ाना"),
+            PuzzleAction("open", "opens", "opening", listOf("the", "door"), "दरवाज़ा", "खोल", "खोलना")
+        )
+
+        val list = mutableListOf<SentencePuzzleItem>()
+        var idx = 51
+        for (act in actions) {
+            for (sub in subjects) {
+                // 1. Present habit
+                val presEnd = when {
+                    sub.en == "I" -> "${act.stemHi}ता हूँ"
+                    sub.gender == 'F' -> "${act.stemHi}ती है"
+                    sub.isThirdSingular -> "${act.stemHi}ता है"
+                    else -> "${act.stemHi}ते हैं"
+                }
+                list.add(
+                    SentencePuzzleItem(
+                        "sp$idx",
+                        "${sub.hi} रोज़ ${act.objHi} $presEnd।",
+                        listOf(sub.en, if (sub.isThirdSingular) act.v1s else act.v1) + act.objWords + listOf("daily"),
+                        if (sub.isThirdSingular) "He/She के साथ Present Simple में Verb के अंत में s/es लगता है।" else "रोज़ की आदत में ${sub.en} के साथ V1 (${act.v1}) लगाएं।"
+                    )
+                )
+                idx++
+
+                // 2. Present continuous
+                val contEnd = when {
+                    sub.en == "I" -> "${act.stemHi} रहा हूँ"
+                    sub.gender == 'F' -> "${act.stemHi} रही है"
+                    sub.isThirdSingular -> "${act.stemHi} रहा है"
+                    else -> "${act.stemHi} रहे हैं"
+                }
+                list.add(
+                    SentencePuzzleItem(
+                        "sp$idx",
+                        "${sub.hi} अभी ${act.objHi} $contEnd।",
+                        listOf(sub.en, sub.beEn, act.ving) + act.objWords + listOf("now"),
+                        "चल रहे काम में '${sub.en} ${sub.beEn} + ${act.ving}' आता है।"
+                    )
+                )
+                idx++
+
+                // 3. Can easily
+                val canEnd = when {
+                    sub.en == "I" -> "${act.stemHi} सकता हूँ"
+                    sub.gender == 'F' -> "${act.stemHi} सकती है"
+                    sub.isThirdSingular -> "${act.stemHi} सकता है"
+                    else -> "${act.stemHi} सकते हैं"
+                }
+                list.add(
+                    SentencePuzzleItem(
+                        "sp$idx",
+                        "${sub.hi} आसानी से ${act.objHi} $canEnd।",
+                        listOf(sub.en, "can", act.v1) + act.objWords + listOf("easily"),
+                        "क्षमता बताने के लिए 'can' के बाद हमेशा V1 (${act.v1}) आता है।"
+                    )
+                )
+                idx++
+
+                // 4. Should daily
+                list.add(
+                    SentencePuzzleItem(
+                        "sp$idx",
+                        "${sub.hiKo} रोज़ ${act.objHi} ${act.infHi} चाहिए।",
+                        listOf(sub.en, "should", act.v1) + act.objWords + listOf("daily"),
+                        "सलाह के लिए 'should' के बाद हमेशा V1 (${act.v1}) लगाएं।"
+                    )
+                )
+                idx++
+
+                // 5. Want to today
+                val wantEnd = when {
+                    sub.en == "I" -> "चाहता हूँ"
+                    sub.gender == 'F' -> "चाहती है"
+                    sub.isThirdSingular -> "चाहता है"
+                    else -> "चाहते हैं"
+                }
+                list.add(
+                    SentencePuzzleItem(
+                        "sp$idx",
+                        "${sub.hi} आज ${act.objHi} ${act.infHi} $wantEnd।",
+                        listOf(sub.en, sub.wantEn, "to", act.v1) + act.objWords + listOf("today"),
+                        "'${sub.wantEn} to' के बाद हमेशा V1 (${act.v1}) आता है।"
+                    )
+                )
+                idx++
+            }
+        }
+        return list
+    }
+
+    private fun buildExtraBossQuestions(): List<BossQuestionItem> {
+        val list = mutableListOf<BossQuestionItem>()
+
+        // 200 Verb-form mastery Boss questions from all 50 verbs
+        verbForms.forEachIndexed { i, v ->
+            val cleanV1 = v.v1.lowercase()
+            val cleanV2 = v.v2.substringBefore(" ").substringBefore("/").lowercase()
+            val cleanV3 = v.v3.substringBefore(" ").substringBefore("/").lowercase()
+            val cleanVing = when {
+                cleanV1 == "write" || cleanV1 == "make" || cleanV1 == "take" || cleanV1 == "give" ||
+                    cleanV1 == "come" || cleanV1 == "leave" || cleanV1 == "lose" || cleanV1 == "choose" ||
+                    cleanV1 == "forgive" || cleanV1 == "wake" -> cleanV1.dropLast(1) + "ing"
+                cleanV1 == "sit" || cleanV1 == "run" || cleanV1 == "win" || cleanV1 == "begin" -> cleanV1 + cleanV1.last() + "ing"
+                else -> cleanV1 + "ing"
+            }
+            val cleanV1s = if (cleanV1.endsWith("o") || cleanV1.endsWith("ch") || cleanV1.endsWith("s")) "${cleanV1}es" else "${cleanV1}s"
+
+            fun makeOptions(answer: String, seed: Int): Pair<List<String>, Int> {
+                val base = (listOf(answer) + listOf(cleanV1, cleanV2, cleanV3, cleanVing, cleanV1s, "was $cleanV1", "to $cleanV1"))
+                    .distinct()
+                    .take(4)
+                val shift = seed % base.size
+                val rotated = base.drop(shift) + base.take(shift)
+                return rotated to rotated.indexOf(answer)
+            }
+
+            val (o1, c1) = makeOptions(cleanV2, i)
+            list.add(BossQuestionItem("Past Simple (कल / V2) — '${v.meaningHi}':", "Yesterday Rahul ___ quickly.", o1, c1, "बीते हुए कल के लिए '${v.v1}' का 2nd form '$cleanV2' आता है।"))
+
+            val (o2, c2) = makeOptions(cleanV1, i + 1)
+            list.add(BossQuestionItem("'did not' नियम — '${v.meaningHi}':", "She did not ___ yesterday.", o2, c2, "'did not' के साथ हमेशा क्रिया का पहला रूप (V1 = '$cleanV1') लगता है।"))
+
+            val (o3, c3) = makeOptions(cleanV3, i + 2)
+            list.add(BossQuestionItem("Present Perfect (Has/Have + V3) — '${v.meaningHi}':", "They have ___ already.", o3, c3, "Has/Have के साथ 3rd form (V3 = '$cleanV3') का प्रयोग होता है।"))
+
+            val (o4, c4) = makeOptions(cleanVing, i + 3)
+            list.add(BossQuestionItem("Continuous (अभी चल रहा काम) — '${v.meaningHi}':", "I am ___ right now.", o4, c4, "is/am/are के साथ '-ing' रूप ('$cleanVing') आता है।"))
+        }
+
+        // 160 Preposition, Article, Modal & Subject-Verb Boss questions
+        val grammarSets = listOf(
+            BossQuestionItem("सही Preposition (दिन):", "Our meeting is ___ Wednesday.", listOf("in", "at", "on", "to"), 2, "दिन के नाम से पहले हमेशा 'on' आता है।"),
+            BossQuestionItem("सही Preposition (समय):", "The bus leaves ___ 5:45 PM.", listOf("on", "at", "in", "by"), 1, "घड़ी के सटीक समय के लिए 'at' लगता है।"),
+            BossQuestionItem("सही Preposition (महीना):", "Schools reopen ___ July.", listOf("at", "on", "in", "to"), 2, "महीने और साल से पहले 'in' का उपयोग होता है।"),
+            BossQuestionItem("Article नियम (A / An):", "He is ___ honest officer.", listOf("a", "an", "the", "कोई नहीं"), 1, "'Honest' में 'ऑ' (स्वर ध्वनि) से शुरुआत होती है, इसलिए 'an' आएगा।"),
+            BossQuestionItem("Article नियम (A / An):", "She works in ___ university.", listOf("an", "a", "any", "the"), 1, "'University' की आवाज 'यू' (व्यंजन) से शुरू होती है, इसलिए 'a' लगेगा।"),
+            BossQuestionItem("Singular / Plural नियम:", "The children ___ playing outside.", listOf("is", "are", "was", "has"), 1, "'Children' बहुवचन है, इसलिए 'are' लगेगा।"),
+            BossQuestionItem("Everyone के साथ Verb:", "Everyone ___ ready for the test.", listOf("are", "were", "is", "have"), 2, "'Everyone / Somebody' हमेशा एकवचन माना जाता है, इसलिए 'is' लगेगा।"),
+            BossQuestionItem("Since vs For:", "We have lived here ___ 2019.", listOf("for", "since", "from", "at"), 1, "निश्चित साल (2019) के लिए 'since' आता है।"),
+            BossQuestionItem("Since vs For:", "She studied ___ three hours.", listOf("since", "for", "from", "by"), 1, "कुल अवधि (3 hours) के लिए 'for' आता है।"),
+            BossQuestionItem("Modal Verb नियम:", "You must ___ traffic rules.", listOf("to follow", "following", "follow", "followed"), 2, "Can/Should/Must के साथ हमेशा V1 ('follow') आता है।")
+        )
+        val times = listOf("6:00 AM", "8:30 PM", "7:15 AM", "9:00 PM")
+        val days = listOf("Monday", "Tuesday", "Thursday", "Saturday")
+        val months = listOf("January", "March", "August", "October")
+        val durations = listOf("two days", "four hours", "six months", "five years")
+        val years = listOf("2018", "2020", "2022", "morning")
+        val singularNouns = listOf("My brother", "His sister", "The teacher", "This student")
+        val pluralNouns = listOf("My friends", "The students", "Our parents", "These boys")
+        val modalVerbs = listOf("can", "should", "must", "will")
+
+        // Fill up to 400 total (40 core + 200 verbs + 160 grammar = 400)
+        val extraGrammar = mutableListOf<BossQuestionItem>()
+        for (round in 0 until 16) {
+            extraGrammar.addAll(grammarSets)
+            val t = times[round % times.size]
+            val d = days[round % days.size]
+            val m = months[round % months.size]
+            val dur = durations[round % durations.size]
+            val yr = years[round % years.size]
+            val sn = singularNouns[round % singularNouns.size]
+            val pn = pluralNouns[round % pluralNouns.size]
+            val mv = modalVerbs[round % modalVerbs.size]
+            extraGrammar.add(BossQuestionItem("सही Preposition (घड़ी का समय):", "I wake up ___ $t.", listOf("in", "on", "at", "by"), 2, "समय से पहले हमेशा 'at' आता है।"))
+            extraGrammar.add(BossQuestionItem("सही Preposition (दिन):", "We have a holiday ___ $d.", listOf("on", "in", "at", "to"), 0, "दिन के नाम से पहले हमेशा 'on' लगता है।"))
+            extraGrammar.add(BossQuestionItem("सही Preposition (महीना):", "My birthday is ___ $m.", listOf("at", "in", "on", "for"), 1, "महीने के नाम से पहले 'in' आता है।"))
+            extraGrammar.add(BossQuestionItem("Since बनाम For:", "He waited here ___ $dur.", listOf("since", "for", "at", "on"), 1, "अवधि ($dur) बताने के लिए 'for' आता है।"))
+            extraGrammar.add(BossQuestionItem("Since बनाम For:", "It has rained ___ $yr.", listOf("for", "from", "since", "in"), 2, "निश्चित शुरुआती बिंदु ($yr) के लिए 'since' लगता है।"))
+            extraGrammar.add(BossQuestionItem("एकवचन कर्ता नियम:", "$sn ___ very hard every day.", listOf("work", "works", "working", "are work"), 1, "$sn एकवचन है, इसलिए 'works' लगेगा।"))
+            extraGrammar.add(BossQuestionItem("बहुवचन कर्ता नियम:", "$pn ___ practicing English now.", listOf("is", "am", "are", "was"), 2, "$pn बहुवचन है, इसलिए 'are' लगेगा।"))
+            extraGrammar.add(BossQuestionItem("Modal नियम ($mv):", "They $mv ___ on time.", listOf("to come", "coming", "come", "came"), 2, "'$mv' के साथ हमेशा V1 ('come') आता है।"))
+        }
+        list.addAll(extraGrammar.take(160))
+        return list
+    }
+
+    private fun buildWordMatchPairs(): List<FlashcardItem> {
+        val fromVerbs = verbForms.mapIndexed { idx, v ->
+            FlashcardItem("wm_v$idx", v.v1, v.pronunciationHi.substringBefore(" -"), v.meaningHi, "${v.v1} daily.", "", "Verbs")
+        }
+        val extraPairs = listOf(
+            "Honest" to "ईमानदार", "Brave" to "बहादुर", "Simple" to "सरल / आसान", "Smart" to "समझदार",
+            "Clean" to "साफ़", "Fresh" to "ताज़ा", "Heavy" to "भारी", "Light" to "हल्का / रोशनी",
+            "Quick" to "तेज़ / जल्दी", "Slow" to "धीमा", "Bright" to "चमकीला", "Silent" to "शांत",
+            "Friend" to "दोस्त", "Neighbour" to "पड़ोसी", "Teacher" to "शिक्षक", "Student" to "छात्र",
+            "Family" to "परिवार", "Parent" to "माता-पिता", "Brother" to "भाई", "Sister" to "बहन",
+            "Village" to "गाँव", "City" to "शहर", "Market" to "बाज़ार", "Station" to "स्टेशन",
+            "School" to "स्कूल", "Library" to "पुस्तकालय", "Hospital" to "अस्पताल", "Office" to "दफ़्तर",
+            "Morning" to "सुबह", "Afternoon" to "दोपहर", "Evening" to "शाम", "Night" to "रात",
+            "Today" to "आज", "Tomorrow" to "आने वाला कल", "Yesterday" to "बीता कल", "Always" to "हमेशा",
+            "Never" to "कभी नहीं", "Often" to "अक्सर", "Sometimes" to "कभी-कभी", "Early" to "जल्दी",
+            "Water" to "पानी", "Food" to "खाना", "Fruit" to "फल", "Vegetable" to "सब्ज़ी",
+            "Milk" to "दूध", "Sugar" to "चीनी", "Salt" to "नमक", "Bread" to "रोटी / ब्रेड",
+            "Book" to "किताब", "Notebook" to "कॉपी", "Letter" to "पत्र", "Message" to "संदेश",
+            "Question" to "सवाल", "Answer" to "जवाब", "Mistake" to "गलती", "Lesson" to "पाठ",
+            "Success" to "सफलता", "Failure" to "असफलता", "Effort" to "प्रयास", "Dream" to "सपना",
+            "Goal" to "लक्ष्य", "Plan" to "योजना", "Future" to "भविष्य", "Memory" to "याददाश्त",
+            "Health" to "सेहत", "Medicine" to "दवाई", "Fever" to "बुखार", "Headache" to "सिरदर्द",
+            "Happy" to "खुश", "Sad" to "उदास", "Angry" to "नाराज़", "Afraid" to "डरा हुआ",
+            "Excited" to "उत्साहित", "Tired" to "थका हुआ", "Hungry" to "भूखा", "Thirsty" to "प्यासा",
+            "Money" to "पैसा", "Price" to "कीमत", "Discount" to "छूट", "Shop" to "दुकान",
+            "Ticket" to "टिकट", "Journey" to "यात्रा", "Seat" to "सीट", "Road" to "सड़क",
+            "Train" to "रेलगाड़ी", "Bus" to "बस", "Driver" to "चालक", "Passenger" to "यात्री",
+            "Weather" to "मौसम", "Rain" to "बारिश", "Sun" to "सूरज", "Wind" to "हवा",
+            "Summer" to "गर्मी", "Winter" to "सर्दी", "Tree" to "पेड़", "Flower" to "फूल",
+            "Mountain" to "पहाड़", "River" to "नदी", "Earth" to "पृथ्वी", "Sky" to "आसमान",
+            "Door" to "दरवाज़ा", "Window" to "खिड़की", "Chair" to "कुर्सी", "Table" to "मेज़",
+            "Mirror" to "शीशा", "Kitchen" to "रसोई", "Room" to "कमरा", "House" to "घर",
+            "Clothes" to "कपड़े", "Shoes" to "जूते", "Bag" to "बैग", "Watch" to "घड़ी",
+            "Phone" to "फोन", "Battery" to "बैटरी", "Network" to "नेटवर्क", "Screen" to "स्क्रीन",
+            "Respect" to "सम्मान", "Truth" to "सच", "Promise" to "वादा", "Trust" to "भरोसा",
+            "Kindness" to "दयालुता", "Peace" to "शांति", "Strength" to "ताकत", "Skill" to "कौशल",
+            "Career" to "करियर", "Salary" to "वेतन", "Teamwork" to "टीमवर्क", "Meeting" to "मीटिंग",
+            "Project" to "प्रोजेक्ट", "Deadline" to "अंतिम समय", "Report" to "रिपोर्ट", "Leave" to "छुट्टी",
+            "Left" to "बायाँ", "Right" to "दायाँ", "Front" to "सामने", "Behind" to "पीछे",
+            "Inside" to "अंदर", "Outside" to "बाहर", "Near" to "पास", "Far" to "दूर",
+            "Before" to "पहले", "After" to "बाद में", "During" to "के दौरान", "Without" to "के बिना",
+            "Together" to "साथ में", "Alone" to "अकेले", "Everywhere" to "हर जगह", "Nothing" to "कुछ नहीं",
+            "Problem" to "समस्या", "Idea" to "विचार", "Choice" to "विकल्प", "Reason" to "कारण",
+            "Example" to "उदाहरण", "Meaning" to "अर्थ", "Sentence" to "वाक्य", "Language" to "भाषा",
+            "Voice" to "आवाज़", "Smile" to "मुस्कान", "Victory" to "जीत", "Hope" to "उम्मीद"
+        ).mapIndexed { idx, (en, hi) ->
+            FlashcardItem("wm_e$idx", en, en, hi, en, hi, "General")
+        }
+        return (flashcards + fromVerbs + extraPairs).take(250)
+    }
+
+    private fun buildListeningSentences(): List<DailyUseSentence> {
+        val fromCourse = thirtyDayCourse.flatMap { day ->
+            day.sentences
+                .filter { !it.first.contains("|") }
+                .map { (en, hi) -> DailyUseSentence(day.weekLabelHi, en, "", hi) }
+        }
+        val fromPuzzles = sentencePuzzles
+            .map { DailyUseSentence("सुनो और समझो", it.correctWords.joinToString(" ") + ".", "", it.hindiPrompt) }
+        val combined = (dailyUseSentences + fromCourse + fromPuzzles)
+            .distinctBy { it.english.lowercase() }
+        return combined.take(280)
+    }
 }
 
