@@ -302,6 +302,27 @@ fun EnglishSeekhoRootApp() {
                         progress = progress,
                         speechCoach = speechCoach,
                         feedback = feedback,
+                        onUpdatePuzzleProgress = { levelIdx, solved ->
+                            updateProgress {
+                                it.copy(
+                                    puzzleLevelIndex = levelIdx,
+                                    puzzleSolvedCount = solved
+                                )
+                            }
+                        },
+                        onUpdateWordMatchBatch = { batchIdx ->
+                            updateProgress {
+                                it.copy(wordMatchBatchIndex = batchIdx)
+                            }
+                        },
+                        onUpdateBossProgress = { qIdx, bossScore ->
+                            updateProgress {
+                                it.copy(
+                                    bossQuestionIndex = qIdx,
+                                    bossScoreCount = bossScore
+                                )
+                            }
+                        },
                         onRewardEarned = { xp, coins, badge, notifyTitle, notifyMsg ->
                             updateProgress { p ->
                                 p.copy(

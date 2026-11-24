@@ -15,6 +15,11 @@ data class UserProgress(
     val masteredWordIds: Set<String> = emptySet(),
     val reviewWordIds: Set<String> = emptySet(),
     val unlockedBadges: Set<String> = emptySet(),
+    val puzzleLevelIndex: Int = 0,
+    val puzzleSolvedCount: Int = 0,
+    val wordMatchBatchIndex: Int = 0,
+    val bossQuestionIndex: Int = 0,
+    val bossScoreCount: Int = 0,
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val notificationsEnabled: Boolean = true,
@@ -48,6 +53,11 @@ class LocalProgressStore(context: Context) {
             masteredWordIds = readSet("mastered_words"),
             reviewWordIds = readSet("review_words"),
             unlockedBadges = readSet("unlocked_badges"),
+            puzzleLevelIndex = prefs.getInt("puzzle_level_index", 0),
+            puzzleSolvedCount = prefs.getInt("puzzle_solved_count", 0),
+            wordMatchBatchIndex = prefs.getInt("word_match_batch_index", 0),
+            bossQuestionIndex = prefs.getInt("boss_question_index", 0),
+            bossScoreCount = prefs.getInt("boss_score_count", 0),
             soundEnabled = prefs.getBoolean("sound_enabled", true),
             vibrationEnabled = prefs.getBoolean("vibration_enabled", true),
             notificationsEnabled = prefs.getBoolean("notifications_enabled", true),
@@ -69,6 +79,11 @@ class LocalProgressStore(context: Context) {
             .putString("mastered_words", JSONArray(progress.masteredWordIds.toList()).toString())
             .putString("review_words", JSONArray(progress.reviewWordIds.toList()).toString())
             .putString("unlocked_badges", JSONArray(progress.unlockedBadges.toList()).toString())
+            .putInt("puzzle_level_index", progress.puzzleLevelIndex)
+            .putInt("puzzle_solved_count", progress.puzzleSolvedCount)
+            .putInt("word_match_batch_index", progress.wordMatchBatchIndex)
+            .putInt("boss_question_index", progress.bossQuestionIndex)
+            .putInt("boss_score_count", progress.bossScoreCount)
             .putBoolean("sound_enabled", progress.soundEnabled)
             .putBoolean("vibration_enabled", progress.vibrationEnabled)
             .putBoolean("notifications_enabled", progress.notificationsEnabled)

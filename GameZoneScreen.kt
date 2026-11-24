@@ -33,6 +33,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,6 +68,9 @@ fun GameZoneScreen(
     progress: UserProgress,
     speechCoach: SpeechCoach,
     feedback: FeedbackManager,
+    onUpdatePuzzleProgress: (levelIndex: Int, solvedCount: Int) -> Unit,
+    onUpdateWordMatchBatch: (batchIndex: Int) -> Unit,
+    onUpdateBossProgress: (questionIndex: Int, scoreCount: Int) -> Unit,
     onRewardEarned: (
         xp: Int,
         coins: Int,
@@ -106,6 +110,11 @@ fun GameZoneScreen(
                     color = EmeraldLight,
                     fontWeight = FontWeight.SemiBold
                 )
+                Text(
+                    text = "आपका गेम लेवल अपने-आप सेव रहता है — जहाँ छोड़ें वहीं से आगे खेलें!",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = EmeraldLight
+                )
             }
         }
 
@@ -113,17 +122,17 @@ fun GameZoneScreen(
             FilterChip(
                 selected = gameMode == 0,
                 onClick = { gameMode = 0 },
-                label = { Text("वाक्य पहेली (Sentence)") }
+                label = { Text("वाक्य पहेली (50 लेवल)") }
             )
             FilterChip(
                 selected = gameMode == 1,
                 onClick = { gameMode = 1 },
-                label = { Text("60s शब्द मिलान") }
+                label = { Text("60s मिलान (8 स्टेज)") }
             )
             FilterChip(
                 selected = gameMode == 2,
                 onClick = { gameMode = 2 },
-                label = { Text("साप्ताहिक Boss गेम") }
+                label = { Text("Boss गेम (40 लेवल)") }
             )
         }
 
@@ -132,6 +141,7 @@ fun GameZoneScreen(
                 progress = progress,
                 speechCoach = speechCoach,
                 feedback = feedback,
+                onUpdatePuzzleProgress = onUpdatePuzzleProgress,
                 onRewardEarned = onRewardEarned
             )
 
@@ -139,6 +149,7 @@ fun GameZoneScreen(
                 progress = progress,
                 speechCoach = speechCoach,
                 feedback = feedback,
+                onUpdateWordMatchBatch = onUpdateWordMatchBatch,
                 onRewardEarned = onRewardEarned
             )
 
@@ -146,6 +157,7 @@ fun GameZoneScreen(
                 progress = progress,
                 speechCoach = speechCoach,
                 feedback = feedback,
+                onUpdateBossProgress = onUpdateBossProgress,
                 onRewardEarned = onRewardEarned
             )
         }
@@ -158,17 +170,20 @@ private fun SentenceBuilderGame(
     progress: UserProgress,
     speechCoach: SpeechCoach,
     feedback: FeedbackManager,
+    onUpdatePuzzleProgress: (Int, Int) -> Unit,
     onRewardEarned: (Int, Int, String?, String?, String?) -> Unit
 ) {
     val puzzles = CurriculumRepository.sentencePuzzles
-    var puzzleIndex by remember { mutableIntStateOf(0) }
+    var puzzleIndex by remember {
+        mutableIntStateOf(progress.puzzleLevelIndex.coerceIn(0, puzzles.lastIndex))
+    }
     val puzzle = puzzles[puzzleIndex]
 
     val poolWords = remember(puzzleIndex) { puzzle.correctWords.shuffled() }
     var selectedIndices by remember(puzzleIndex) { mutableStateOf<List<Int>>(emptyList()) }
     var hearts by remember { mutableIntStateOf(3) }
     var combo by remember { mutableIntStateOf(0) }
-    var solvedCount by remember { mutableIntStateOf(0) }
+    val solvedCount = progress.puzzleSolvedCount
     var statusState by remember(puzzleIndex) { mutableIntStateOf(0) } // 0 = playing, 1 = correct, -1 = wrong
 
     val builtWords = selectedIndices.map { poolWords[it] }
@@ -189,7 +204,7 @@ private fun SentenceBuilderGame(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "पहेली ${puzzleIndex + 1}/${puzzles.size}",
+                    text = "लेवल ${puzzleIndex + 1} / ${puzzles.size}",
                     style = MaterialTheme.typography.labelLarge,
                     color = EmeraldPrimary,
                     fontWeight = FontWeight.Bold
@@ -221,11 +236,17 @@ private fun SentenceBuilderGame(
                 }
             }
 
+            LinearProgressIndicator(
+                progress = { (puzzleIndex + 1).toFloat() / puzzles.size.toFloat() },
+                modifier = Modifier.fillMaxWidth().height(6.dp),
+                color = EmeraldPrimary
+            )
+
             if (hearts <= 0) {
                 Card(colors = CardDefaults.cardColors(containerColor = ErrorSoft), modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("सभी 3 ❤️ खत्म हो गए!", fontWeight = FontWeight.Bold, color = ErrorRed)
-                        Text("चिंता न करें — दोबारा प्रयास करें और अपनी Streak बनाएं।", style = MaterialTheme.typography.bodySmall)
+                        Text("चिंता न करें — आप अभी भी लेवल ${puzzleIndex + 1} पर ही हैं।", style = MaterialTheme.typography.bodySmall)
                         Button(
                             onClick = {
                                 hearts = 3
@@ -336,20 +357,28 @@ private fun SentenceBuilderGame(
                         if (builtWords == puzzle.correctWords) {
                             statusState = 1
                             combo += 1
-                            solvedCount += 1
+                            val nextSolved = solvedCount + 1
+                            val nextLevel = (puzzleIndex + 1) % puzzles.size
                             val multiplier = combo.coerceAtMost(3)
                             val earnedXp = 15 * multiplier
                             val earnedCoins = 10 * multiplier
                             feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
                             speechCoach.speak(puzzle.correctWords.joinToString(" "), 0.9f)
 
-                            val milestone = solvedCount % 3 == 0
+                            // Save next level immediately so user resumes from next unsolved level
+                            onUpdatePuzzleProgress(nextLevel, nextSolved)
+
+                            val milestone = nextSolved % 5 == 0
                             onRewardEarned(
                                 earnedXp,
                                 earnedCoins,
-                                if (solvedCount >= 3) "Sentence Master" else null,
-                                if (milestone) "वाक्य पहेली चैंपियन! (+${earnedCoins} Coins)" else null,
-                                if (milestone) "शाबाश! आपने $solvedCount वाक्य पहेलियाँ जीत लीं और $earnedXp XP पाए।" else null
+                                when {
+                                    nextSolved >= 25 -> "Sentence Grandmaster"
+                                    nextSolved >= 5 -> "Sentence Master"
+                                    else -> null
+                                },
+                                if (milestone) "लेवल ${puzzleIndex + 1} पार! (+$earnedCoins Coins)" else null,
+                                if (milestone) "शाबाश! आपने अब तक $nextSolved वाक्य पहेलियाँ जीत ली हैं।" else null
                             )
                         } else {
                             statusState = -1
@@ -377,7 +406,7 @@ private fun SentenceBuilderGame(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("अगली पहेली खेलें")
+                    Text(if (puzzleIndex < puzzles.lastIndex) "अगली पहेली खेलें" else "लेवल 1 से फिर खेलें")
                 }
             } else if (statusState == -1) {
                 Text(
@@ -386,6 +415,18 @@ private fun SentenceBuilderGame(
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Medium
                 )
+            }
+
+            if (puzzleIndex > 0) {
+                TextButton(
+                    onClick = {
+                        puzzleIndex = 0
+                        onUpdatePuzzleProgress(0, solvedCount)
+                    },
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("लेवल 1 से शुरू करें")
+                }
             }
         }
     }
@@ -396,21 +437,27 @@ private fun WordMatchSpeedGame(
     progress: UserProgress,
     speechCoach: SpeechCoach,
     feedback: FeedbackManager,
+    onUpdateWordMatchBatch: (Int) -> Unit,
     onRewardEarned: (Int, Int, String?, String?, String?) -> Unit
 ) {
-    var batchStart by remember { mutableIntStateOf(0) }
-    val cards = remember(batchStart) {
+    val totalBatches = (CurriculumRepository.flashcards.size / 5).coerceAtLeast(1)
+    var batchIndex by remember {
+        mutableIntStateOf(progress.wordMatchBatchIndex.coerceIn(0, totalBatches - 1))
+    }
+    val batchStart = batchIndex * 5
+
+    val cards = remember(batchIndex) {
         val total = CurriculumRepository.flashcards.size
         List(5) { idx -> CurriculumRepository.flashcards[(batchStart + idx) % total] }
     }
-    val shuffledHindi = remember(batchStart) { cards.shuffled() }
+    val shuffledHindi = remember(batchIndex) { cards.shuffled() }
 
-    var selectedEnglishId by remember(batchStart) { mutableStateOf<String?>(null) }
-    var matchedIds by remember(batchStart) { mutableStateOf<Set<String>>(emptySet()) }
+    var selectedEnglishId by remember(batchIndex) { mutableStateOf<String?>(null) }
+    var matchedIds by remember(batchIndex) { mutableStateOf<Set<String>>(emptySet()) }
     var timeLeft by remember { mutableIntStateOf(60) }
     var timerActive by remember { mutableStateOf(false) }
     var totalMatched by remember { mutableIntStateOf(0) }
-    var statusNote by remember { mutableStateOf("बाएँ से English शब्द और दाएँ से उसका सही हिंदी अर्थ चुनें!") }
+    var statusNote by remember { mutableStateOf("स्टेज ${batchIndex + 1}/$totalBatches · बाएँ से English शब्द और दाएँ से हिंदी अर्थ चुनें!") }
 
     LaunchedEffect(timerActive, timeLeft) {
         if (timerActive && timeLeft > 0) {
@@ -449,13 +496,13 @@ private fun WordMatchSpeedGame(
                     Icon(Icons.Rounded.Timer, contentDescription = null, tint = if (timeLeft <= 10) ErrorRed else EmeraldPrimary)
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "${timeLeft}s शेष",
+                        text = "${timeLeft}s · स्टेज ${batchIndex + 1}/$totalBatches",
                         fontWeight = FontWeight.Bold,
                         color = if (timeLeft <= 10) ErrorRed else EmeraldPrimary
                     )
                 }
                 Text(
-                    text = "सही मिलान: $totalMatched",
+                    text = "मिलान: $totalMatched",
                     fontWeight = FontWeight.Bold,
                     color = AmberAccent
                 )
@@ -472,15 +519,16 @@ private fun WordMatchSpeedGame(
             if (timeLeft == 0) {
                 Button(
                     onClick = {
+                        matchedIds = emptySet()
+                        selectedEnglishId = null
                         timeLeft = 60
                         totalMatched = 0
-                        batchStart = (batchStart + 5) % CurriculumRepository.flashcards.size
                         timerActive = true
-                        statusNote = "नया राउंड शुरू! फटाफट जोड़े मिलाएं।"
+                        statusNote = "स्टेज ${batchIndex + 1} फिर से शुरू! फटाफट जोड़े मिलाएं।"
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("नया 60s राउंड शुरू करें")
+                    Text("इसी स्टेज से 60s राउंड शुरू करें")
                 }
                 return@Column
             }
@@ -489,7 +537,6 @@ private fun WordMatchSpeedGame(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Left: English words
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -523,7 +570,6 @@ private fun WordMatchSpeedGame(
                     }
                 }
 
-                // Right: Hindi meanings
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -548,15 +594,18 @@ private fun WordMatchSpeedGame(
                                     statusNote = "सही जोड़ी! +8 XP · +5 Coins"
 
                                     if (newMatched.size == cards.size) {
+                                        val nextBatch = (batchIndex + 1) % totalBatches
                                         feedback.playCelebration(progress.soundEnabled, progress.vibrationEnabled)
+                                        onUpdateWordMatchBatch(nextBatch)
+                                        batchIndex = nextBatch
                                         onRewardEarned(
                                             15,
                                             10,
                                             if (totalMatched >= 5) "Speed Matcher" else null,
-                                            "Word Match सेट साफ़!",
-                                            "शाबाश! 5/5 सही मिलान करने पर +15 XP बोनस मिला।"
+                                            "स्टेज ${(batchIndex + totalBatches - 1) % totalBatches + 1} साफ़! 🎉",
+                                            "शाबाश! अब आप स्टेज ${nextBatch + 1} पर पहुँच गए हैं।"
                                         )
-                                        batchStart = (batchStart + 5) % CurriculumRepository.flashcards.size
+                                        statusNote = "शानदार! नया स्टेज ${nextBatch + 1}/$totalBatches लोड हो गया है।"
                                     }
                                 } else {
                                     feedback.playWrong(progress.soundEnabled, progress.vibrationEnabled)
@@ -576,6 +625,19 @@ private fun WordMatchSpeedGame(
                     }
                 }
             }
+
+            if (batchIndex > 0) {
+                TextButton(
+                    onClick = {
+                        batchIndex = 0
+                        onUpdateWordMatchBatch(0)
+                        statusNote = "स्टेज 1/$totalBatches · बाएँ से English शब्द और दाएँ से हिंदी अर्थ चुनें!"
+                    },
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("स्टेज 1 से शुरू करें")
+                }
+            }
         }
     }
 }
@@ -585,14 +647,16 @@ private fun WeeklyBossChallengeGame(
     progress: UserProgress,
     speechCoach: SpeechCoach,
     feedback: FeedbackManager,
+    onUpdateBossProgress: (Int, Int) -> Unit,
     onRewardEarned: (Int, Int, String?, String?, String?) -> Unit
 ) {
     val questions = CurriculumRepository.bossQuestions
-    var qIndex by remember { mutableIntStateOf(0) }
+    var qIndex by remember {
+        mutableIntStateOf(progress.bossQuestionIndex.coerceIn(0, questions.lastIndex))
+    }
     var hearts by remember { mutableIntStateOf(3) }
-    var selectedOpt by remember { mutableIntStateOf(-1) }
-    var score by remember { mutableIntStateOf(0) }
-    var finished by remember { mutableStateOf(false) }
+    var selectedOpt by remember(qIndex) { mutableIntStateOf(-1) }
+    val score = progress.bossScoreCount
 
     Card(
         colors = CardDefaults.cardColors(containerColor = CardSurface),
@@ -610,7 +674,7 @@ private fun WeeklyBossChallengeGame(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "साप्ताहिक Boss चैलेंज (${qIndex + 1}/${questions.size})",
+                    text = "Boss लेवल ${qIndex + 1} / ${questions.size} · सही: $score",
                     fontWeight = FontWeight.Bold,
                     color = AmberAccent
                 )
@@ -625,34 +689,30 @@ private fun WeeklyBossChallengeGame(
                 }
             }
 
-            if (finished || hearts <= 0) {
-                val won = hearts > 0 && score >= 5
+            if (hearts <= 0) {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = if (won) AmberLight else ErrorSoft),
+                    colors = CardDefaults.cardColors(containerColor = ErrorSoft),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = if (won) AmberAccent else ErrorRed)
+                            Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = ErrorRed)
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = if (won) "बॉस चैलेंज विजेता! 🏆" else "कोई बात नहीं — फिर से कोशिश करें!",
+                                text = "सभी 3 ❤️ खत्म हो गए!",
                                 fontWeight = FontWeight.Bold,
-                                color = if (won) AmberAccent else ErrorRed
+                                color = ErrorRed
                             )
                         }
-                        Text("आपका स्कोर: $score / ${questions.size} सही जवाब।")
+                        Text("आपका लेवल सेव है — आप लेवल ${qIndex + 1} से ही आगे खेल सकते हैं।")
                         Button(
                             onClick = {
-                                qIndex = 0
                                 hearts = 3
                                 selectedOpt = -1
-                                score = 0
-                                finished = false
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Boss चैलेंज दोबारा खेलें")
+                            Text("लेवल ${qIndex + 1} से दोबारा खेलें")
                         }
                     }
                 }
@@ -681,9 +741,23 @@ private fun WeeklyBossChallengeGame(
                         if (selectedOpt == -1) {
                             selectedOpt = idx
                             if (isRight) {
-                                score += 1
+                                val nextScore = score + 1
+                                val nextIdx = (qIndex + 1) % questions.size
                                 feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
-                                onRewardEarned(20, 10, null, null, null)
+                                onUpdateBossProgress(nextIdx, nextScore)
+                                val unlocked = when {
+                                    nextScore >= 20 -> "Boss Legend"
+                                    nextScore >= 5 -> "Boss Slayer"
+                                    else -> null
+                                }
+                                val milestone = nextScore % 5 == 0
+                                onRewardEarned(
+                                    20,
+                                    10,
+                                    unlocked,
+                                    if (milestone) "Boss लेवल ${qIndex + 1} जीता! 🏆" else null,
+                                    if (milestone) "बधाई हो! आपने अब तक $nextScore Boss सवाल जीते और खास बैज पाया!" else null
+                                )
                             } else {
                                 hearts = (hearts - 1).coerceAtLeast(0)
                                 feedback.playWrong(progress.soundEnabled, progress.vibrationEnabled)
@@ -713,27 +787,29 @@ private fun WeeklyBossChallengeGame(
                     }
                     Button(
                         onClick = {
-                            if (qIndex < questions.lastIndex) {
-                                qIndex += 1
-                                selectedOpt = -1
-                            } else {
-                                finished = true
-                                if (score >= 5) {
-                                    feedback.playCelebration(progress.soundEnabled, progress.vibrationEnabled)
-                                    onRewardEarned(
-                                        50,
-                                        30,
-                                        "Boss Slayer",
-                                        "Boss Challenge जीता! 🏆",
-                                        "बधाई हो! आपने 'Boss Slayer' बैज अनलॉक किया और +50 XP + 30 Coins जीते!"
-                                    )
-                                }
+                            val nextIdx = (qIndex + 1) % questions.size
+                            if (!ok) {
+                                onUpdateBossProgress(nextIdx, score)
                             }
+                            qIndex = nextIdx
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(if (qIndex < questions.lastIndex) "अगला Boss सवाल" else "परिणाम देखें")
+                        Text(if (qIndex < questions.lastIndex) "अगला सवाल" else "Boss लेवल 1 पर जाएं")
                     }
+                }
+            }
+
+            if (qIndex > 0) {
+                TextButton(
+                    onClick = {
+                        qIndex = 0
+                        selectedOpt = -1
+                        onUpdateBossProgress(0, score)
+                    },
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Boss लेवल 1 पर जाएं")
                 }
             }
         }
