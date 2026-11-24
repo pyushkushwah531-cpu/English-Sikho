@@ -63,7 +63,7 @@ fun SpeakingStudioScreen(
     onSelectMode: (Int) -> Unit = {},
     onAddXp: (Int) -> Unit
 ) {
-    val mode = selectedMode.coerceIn(0, 1) // 0 = Roleplay, 1 = Pronunciation & Shadowing
+    val mode = selectedMode.coerceIn(0, 2) // 0 = Roleplay, 1 = Pronunciation & Shadowing, 2 = Interview Q&A
     var selectedScenarioIndex by remember { mutableIntStateOf(0) }
     var turnIndex by remember { mutableIntStateOf(0) }
     var userReplyInput by remember { mutableStateOf("") }
@@ -84,7 +84,7 @@ fun SpeakingStudioScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text(
-            text = "बोलने और उच्चारण स्टूडियो",
+            text = "बोलने, उच्चारण और इंटरव्यू स्टूडियो",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -94,14 +94,14 @@ fun SpeakingStudioScreen(
             color = SlateMuted
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = mode == 0,
                 onClick = {
                     feedback.playTap(progress.vibrationEnabled)
                     onSelectMode(0)
                 },
-                label = { Text("Roleplay बातचीत (5)") }
+                label = { Text("Roleplay (5)") }
             )
             FilterChip(
                 selected = mode == 1,
@@ -110,6 +110,14 @@ fun SpeakingStudioScreen(
                     onSelectMode(1)
                 },
                 label = { Text("Pronunciation (8)") }
+            )
+            FilterChip(
+                selected = mode == 2,
+                onClick = {
+                    feedback.playTap(progress.vibrationEnabled)
+                    onSelectMode(2)
+                },
+                label = { Text("Interview Pro (10)") }
             )
         }
 
@@ -249,7 +257,7 @@ fun SpeakingStudioScreen(
                     }
                 }
             }
-        } else {
+        } else if (mode == 1) {
             val drill = CurriculumRepository.pronunciationDrills[drillIndex]
             Card(
                 colors = CardDefaults.cardColors(containerColor = CardSurface),
@@ -362,6 +370,80 @@ fun SpeakingStudioScreen(
                                 pronResult = null
                             }
                         ) { Text("अगला वाक्य") }
+                    }
+                }
+            }
+        } else {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = EmeraldLight),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "जॉब इंटरव्यू Pro पैक · टॉप 10 सवाल व जवाब",
+                        fontWeight = FontWeight.Bold,
+                        color = EmeraldPrimary
+                    )
+                    Text(
+                        text = "हर जवाब को 0.75x धीरे सुनें और बोलकर अभ्यास करें — यही सवाल हर कंपनी पूछती है।",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SlateMuted
+                    )
+                }
+            }
+
+            CurriculumRepository.interviewQas.forEachIndexed { idx, qa ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = CardSurface),
+                    border = BorderStroke(1.dp, HairlineBorder),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "सवाल ${idx + 1}: ${qa.questionEn}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = EmeraldPrimary
+                        )
+                        Text("हिंदी: ${qa.questionHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = EmeraldLight),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(qa.answerEn, fontWeight = FontWeight.SemiBold)
+                                Text("अर्थ: ${qa.answerHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                            }
+                        }
+
+                        Text("टिप: ${qa.tipHi}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = {
+                                    feedback.playTap(progress.vibrationEnabled)
+                                    speechCoach.speak(qa.answerEn, 0.75f)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("0.75x सुनें") }
+                            OutlinedButton(
+                                onClick = {
+                                    feedback.playTap(progress.vibrationEnabled)
+                                    speechCoach.speak(qa.answerEn, 1.0f)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("1.0x सुनें") }
+                            Button(
+                                onClick = {
+                                    feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
+                                    onAddXp(10)
+                                }
+                            ) { Text("+10 XP") }
+                        }
                     }
                 }
             }

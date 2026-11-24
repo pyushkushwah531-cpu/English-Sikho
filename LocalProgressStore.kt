@@ -2,12 +2,14 @@ package com.englishseekho.pro.data
 
 import android.content.Context
 import org.json.JSONArray
+import java.util.Calendar
 
 data class UserProgress(
     val studentName: String = "विद्यार्थी",
     val xp: Int = 40,
     val coins: Int = 25,
     val streakDays: Int = 1,
+    val lastActiveDateKey: Int = 0,
     val level: StudentLevel = StudentLevel.ZERO,
     val onboardingDone: Boolean = false,
     val completedTaskIds: Set<String> = emptySet(),
@@ -20,6 +22,8 @@ data class UserProgress(
     val wordMatchBatchIndex: Int = 0,
     val bossQuestionIndex: Int = 0,
     val bossScoreCount: Int = 0,
+    val listeningLevelIndex: Int = 0,
+    val listeningScoreCount: Int = 0,
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val notificationsEnabled: Boolean = true,
@@ -41,11 +45,12 @@ class LocalProgressStore(context: Context) {
     fun load(): UserProgress {
         val levelName = prefs.getString("level", StudentLevel.ZERO.name) ?: StudentLevel.ZERO.name
         val level = runCatching { StudentLevel.valueOf(levelName) }.getOrDefault(StudentLevel.ZERO)
-        return UserProgress(
+        val raw = UserProgress(
             studentName = prefs.getString("student_name", "विद्यार्थी") ?: "विद्यार्थी",
             xp = prefs.getInt("xp", 40),
             coins = prefs.getInt("coins", 25),
             streakDays = prefs.getInt("streak_days", 1),
+            lastActiveDateKey = prefs.getInt("last_active_date_key", 0),
             level = level,
             onboardingDone = prefs.getBoolean("onboarding_done", false),
             completedTaskIds = readSet("completed_tasks"),
@@ -58,12 +63,39 @@ class LocalProgressStore(context: Context) {
             wordMatchBatchIndex = prefs.getInt("word_match_batch_index", 0),
             bossQuestionIndex = prefs.getInt("boss_question_index", 0),
             bossScoreCount = prefs.getInt("boss_score_count", 0),
+            listeningLevelIndex = prefs.getInt("listening_level_index", 0),
+            listeningScoreCount = prefs.getInt("listening_score_count", 0),
             soundEnabled = prefs.getBoolean("sound_enabled", true),
             vibrationEnabled = prefs.getBoolean("vibration_enabled", true),
             notificationsEnabled = prefs.getBoolean("notifications_enabled", true),
             reminderHour = prefs.getInt("reminder_hour", 8),
             geminiApiKey = prefs.getString("gemini_api_key", "") ?: ""
         )
+        return syncDailyStreak(raw)
+    }
+
+    fun syncDailyStreak(current: UserProgress): UserProgress {
+        val cal = Calendar.getInstance()
+        val todayKey = dateKeyOf(cal)
+        val yesterdayCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+        val yesterdayKey = dateKeyOf(yesterdayCal)
+
+        if (current.lastActiveDateKey == todayKey) return current
+
+        val updated = when (current.lastActiveDateKey) {
+            0 -> current.copy(streakDays = current.streakDays.coerceAtLeast(1), lastActiveDateKey = todayKey)
+            yesterdayKey -> current.copy(streakDays = current.streakDays + 1, lastActiveDateKey = todayKey)
+            else -> current.copy(streakDays = 1, lastActiveDateKey = todayKey)
+        }
+        save(updated)
+        return updated
+    }
+
+    private fun dateKeyOf(cal: Calendar): Int {
+        val y = cal.get(Calendar.YEAR)
+        val m = cal.get(Calendar.MONTH) + 1
+        val d = cal.get(Calendar.DAY_OF_MONTH)
+        return y * 10000 + m * 100 + d
     }
 
     fun save(progress: UserProgress) {
@@ -72,6 +104,7 @@ class LocalProgressStore(context: Context) {
             .putInt("xp", progress.xp)
             .putInt("coins", progress.coins)
             .putInt("streak_days", progress.streakDays)
+            .putInt("last_active_date_key", progress.lastActiveDateKey)
             .putString("level", progress.level.name)
             .putBoolean("onboarding_done", progress.onboardingDone)
             .putString("completed_tasks", JSONArray(progress.completedTaskIds.toList()).toString())
@@ -84,6 +117,8 @@ class LocalProgressStore(context: Context) {
             .putInt("word_match_batch_index", progress.wordMatchBatchIndex)
             .putInt("boss_question_index", progress.bossQuestionIndex)
             .putInt("boss_score_count", progress.bossScoreCount)
+            .putInt("listening_level_index", progress.listeningLevelIndex)
+            .putInt("listening_score_count", progress.listeningScoreCount)
             .putBoolean("sound_enabled", progress.soundEnabled)
             .putBoolean("vibration_enabled", progress.vibrationEnabled)
             .putBoolean("notifications_enabled", progress.notificationsEnabled)

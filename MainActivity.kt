@@ -418,6 +418,14 @@ fun EnglishSeekhoRootApp() {
                                 )
                             }
                         },
+                        onUpdateListeningProgress = { lIdx, lScore ->
+                            updateProgress {
+                                it.copy(
+                                    listeningLevelIndex = lIdx,
+                                    listeningScoreCount = lScore
+                                )
+                            }
+                        },
                         onRewardEarned = { xp, coins, badge, notifyTitle, notifyMsg ->
                             updateProgress { p ->
                                 p.copy(
@@ -652,7 +660,7 @@ private fun SplashIntroScreen() {
                 trackColor = Color(0x33FFFFFF)
             )
             Text(
-                text = "v1.2 · 100% ऑफलाइन तैयार",
+                text = "v1.3 · 100% ऑफलाइन तैयार",
                 style = MaterialTheme.typography.labelMedium,
                 color = EmeraldLight
             )

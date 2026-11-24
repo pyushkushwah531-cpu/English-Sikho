@@ -97,65 +97,116 @@ fun VocabAndStoriesScreen(
 
         when (tab) {
             0 -> {
-                val card = CurriculumRepository.flashcards[cardIndex]
-                val mastered = progress.masteredWordIds.contains(card.id)
-                Text(
-                    text = "कार्ड ${cardIndex + 1}/${CurriculumRepository.flashcards.size} · याद हुए शब्द: ${progress.masteredWordIds.size}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SlateMuted
-                )
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = CardSurface),
-                    border = BorderStroke(1.5.dp, if (mastered) SuccessGreen else EmeraldPrimary),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            feedback.playTap(progress.vibrationEnabled)
-                            isFlipped = !isFlipped
-                        }
-                ) {
-                    Column(modifier = Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(card.category, style = MaterialTheme.typography.labelMedium, color = SlateMuted)
-                        Text(card.wordEn, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = EmeraldPrimary)
-                        Text("उच्चारण: ${card.pronunciationHi}", style = MaterialTheme.typography.bodyMedium)
-
-                        if (isFlipped) {
-                            Text("हिंदी अर्थ: ${card.meaningHi}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("वाक्य: ${card.exampleEn}", fontWeight = FontWeight.Medium)
-                            Text("अनुवाद: ${card.exampleHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
-                        } else {
-                            Text("हिंदी अर्थ देखने के लिए कार्ड पर टैप करें", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
-                        }
-
-                        OutlinedButton(onClick = { speechCoach.speak("${card.wordEn}. ${card.exampleEn}") }) {
-                            Icon(Icons.Rounded.VolumeUp, contentDescription = null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("उच्चारण और वाक्य सुनें")
-                        }
+                var reviewOnly by remember { mutableStateOf(false) }
+                val activeList = remember(reviewOnly, progress.reviewWordIds) {
+                    if (reviewOnly) {
+                        CurriculumRepository.flashcards.filter { progress.reviewWordIds.contains(it.id) }
+                    } else {
+                        CurriculumRepository.flashcards
+                    }
+                }
+                if (progress.reviewWordIds.isNotEmpty() || reviewOnly) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = !reviewOnly,
+                            onClick = {
+                                feedback.playTap(progress.vibrationEnabled)
+                                reviewOnly = false
+                                cardIndex = 0
+                                isFlipped = false
+                            },
+                            label = { Text("सभी 40 शब्द") }
+                        )
+                        FilterChip(
+                            selected = reviewOnly,
+                            onClick = {
+                                feedback.playTap(progress.vibrationEnabled)
+                                reviewOnly = true
+                                cardIndex = 0
+                                isFlipped = false
+                            },
+                            label = { Text("कठिन शब्द दोहराएं (${progress.reviewWordIds.size})") }
+                        )
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
-                        onClick = {
-                            onMarkWord(card.id, false)
-                            isFlipped = false
-                            cardIndex = (cardIndex + 1) % CurriculumRepository.flashcards.size
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("दोबारा दोहराएं (Hard)") }
+                if (activeList.isEmpty()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = EmeraldLight),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("बहुत बढ़िया! कोई कठिन शब्द बाकी नहीं है 🎉", fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                            Text("आपने अपने सभी कठिन शब्द याद कर लिए हैं।", style = MaterialTheme.typography.bodySmall)
+                            Button(onClick = { reviewOnly = false; cardIndex = 0 }) {
+                                Text("सभी 40 कार्ड देखें")
+                            }
+                        }
+                    }
+                } else {
+                    val safeIdx = cardIndex.coerceIn(0, activeList.lastIndex)
+                    val card = activeList[safeIdx]
+                    val mastered = progress.masteredWordIds.contains(card.id)
+                    Text(
+                        text = "कार्ड ${safeIdx + 1}/${activeList.size} · याद हुए शब्द: ${progress.masteredWordIds.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SlateMuted
+                    )
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = CardSurface),
+                        border = BorderStroke(1.5.dp, if (mastered) SuccessGreen else EmeraldPrimary),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                feedback.playTap(progress.vibrationEnabled)
+                                isFlipped = !isFlipped
+                            }
+                    ) {
+                        Column(modifier = Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(card.category, style = MaterialTheme.typography.labelMedium, color = SlateMuted)
+                            Text(card.wordEn, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                            Text("उच्चारण: ${card.pronunciationHi}", style = MaterialTheme.typography.bodyMedium)
 
-                    Button(
-                        onClick = {
-                            onMarkWord(card.id, true)
-                            feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
-                            onAddXp(10)
-                            isFlipped = false
-                            cardIndex = (cardIndex + 1) % CurriculumRepository.flashcards.size
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("याद हो गया (+10 XP)") }
+                            if (isFlipped) {
+                                Text("हिंदी अर्थ: ${card.meaningHi}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text("वाक्य: ${card.exampleEn}", fontWeight = FontWeight.Medium)
+                                Text("अनुवाद: ${card.exampleHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                            } else {
+                                Text("हिंदी अर्थ देखने के लिए कार्ड पर टैप करें", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                            }
+
+                            OutlinedButton(onClick = { speechCoach.speak("${card.wordEn}. ${card.exampleEn}") }) {
+                                Icon(Icons.Rounded.VolumeUp, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("उच्चारण और वाक्य सुनें")
+                            }
+                        }
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = {
+                                feedback.playTap(progress.vibrationEnabled)
+                                onMarkWord(card.id, false)
+                                isFlipped = false
+                                cardIndex = (safeIdx + 1) % activeList.size
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("दोबारा दोहराएं (Hard)") }
+
+                        Button(
+                            onClick = {
+                                onMarkWord(card.id, true)
+                                feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
+                                onAddXp(10)
+                                isFlipped = false
+                                cardIndex = if (reviewOnly && activeList.size <= 1) 0 else (safeIdx + 1) % activeList.size
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) { Text("याद हो गया (+10 XP)") }
+                    }
                 }
             }
 

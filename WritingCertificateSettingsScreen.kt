@@ -1,6 +1,13 @@
 package com.englishseekho.pro.ui.screens
 
+import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.englishseekho.pro.data.UserProgress
 import com.englishseekho.pro.ui.theme.CardSurface
 import com.englishseekho.pro.ui.theme.EmeraldLight
@@ -43,6 +51,11 @@ import com.englishseekho.pro.ui.theme.EmeraldPrimary
 import com.englishseekho.pro.ui.theme.HairlineBorder
 import com.englishseekho.pro.ui.theme.SlateMuted
 import com.englishseekho.pro.ui.theme.SuccessGreen
+import java.io.File
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -66,6 +79,8 @@ fun SettingsAlertDialog(
     var notify by remember { mutableStateOf(progress.notificationsEnabled) }
     var hour by remember { mutableIntStateOf(progress.reminderHour) }
     var apiKey by remember { mutableStateOf(progress.geminiApiKey) }
+    var showAdvanced by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
 
     val hourOptions = listOf(
         8 to "8 AM",
@@ -158,18 +173,12 @@ fun SettingsAlertDialog(
 
                 HorizontalDivider(color = HairlineBorder)
 
-                Text(
-                    text = "वैकल्पिक Free Gemini AI Key (बिल्कुल ज़रूरी नहीं — बाकी सब ऑफलाइन फ्री है):",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SlateMuted
-                )
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = { apiKey = it },
-                    label = { Text("Gemini API Key (AIza...)") },
-                    singleLine = true,
+                OutlinedButton(
+                    onClick = { showPrivacyDialog = true },
                     modifier = Modifier.fillMaxWidth()
-                )
+                ) {
+                    Text("Privacy Policy व ऐप जानकारी (v1.3)")
+                }
 
                 OutlinedButton(
                     onClick = {
@@ -179,6 +188,28 @@ fun SettingsAlertDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("लेवल जांच (Level Test) दोबारा दें")
+                }
+
+                TextButton(
+                    onClick = { showAdvanced = !showAdvanced },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (showAdvanced) "Advanced Options छिपाएं ▲" else "Advanced Options (वैकल्पिक AI Key) ▼")
+                }
+
+                if (showAdvanced) {
+                    Text(
+                        text = "यह बिल्कुल वैकल्पिक है — इसके बिना भी पूरा ऐप 100% ऑफलाइन और फ्री चलता है:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SlateMuted
+                    )
+                    OutlinedTextField(
+                        value = apiKey,
+                        onValueChange = { apiKey = it },
+                        label = { Text("Gemini API Key (AIza...)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         },
@@ -205,6 +236,51 @@ fun SettingsAlertDialog(
             }
         }
     )
+
+    if (showPrivacyDialog) {
+        AlertDialog(
+            onDismissRequest = { showPrivacyDialog = false },
+            title = {
+                Text(
+                    text = "Privacy Policy व ऐप जानकारी",
+                    fontWeight = FontWeight.Bold,
+                    color = EmeraldPrimary
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("ऐप: English सीखो Pro (v1.3.0)", fontWeight = FontWeight.Bold)
+                    Text("Package ID: com.englishseekho.pro", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                    HorizontalDivider(color = HairlineBorder)
+                    Text("1. आपका सारा डेटा आपके फोन में सुरक्षित:", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "आपका नाम, XP, Coins, गेम लेवल और 30-दिन प्रगति केवल आपके फोन की लोकल मेमोरी में सेव रहती है। हम कोई व्यक्तिगत डेटा अपने सर्वर पर नहीं भेजते।",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text("2. माइक (Microphone) अनुमति:", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "माइक का उपयोग केवल तभी होता है जब आप 'बोलें' या 'उच्चारण जाँचें' बटन दबाते हैं। आपकी आवाज़ कहीं रिकॉर्ड या स्टोर नहीं की जाती।",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text("3. नोटिफिकेशन अनुमति:", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "केवल आपके द्वारा चुने गए समय पर रोज़ाना पढ़ाई की याद दिलाने के लिए उपयोग किया जाता है। इसे सेटिंग्स से कभी भी बंद कर सकते हैं।",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text("4. संपर्क व सहायता:", fontWeight = FontWeight.SemiBold)
+                    Text("ईमेल: pyushkushwah531@gmail.com", style = MaterialTheme.typography.bodySmall, color = EmeraldPrimary)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { showPrivacyDialog = false }) {
+                    Text("समझ गया")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -281,18 +357,9 @@ fun CertificateAndRankDialog(
         },
         confirmButton = {
             Button(
-                onClick = {
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(
-                            Intent.EXTRA_TEXT,
-                            "मैं 'English सीखो Pro' ऐप से English सीख रहा हूँ! मेरी रैंक: ${progress.rankTitleHi()} (${progress.xp} XP, ${progress.coins} Coins)।"
-                        )
-                    }
-                    context.startActivity(Intent.createChooser(shareIntent, "प्रगति शेयर करें"))
-                }
+                onClick = { shareCertificateImage(context, progress) }
             ) {
-                Text("शेयर करें")
+                Text("फोटो शेयर करें (WhatsApp)")
             }
         },
         dismissButton = {
@@ -302,3 +369,155 @@ fun CertificateAndRankDialog(
         }
     )
 }
+
+private fun shareCertificateImage(context: Context, progress: UserProgress) {
+    val width = 1200
+    val height = 800
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+
+    // Background
+    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#F7F9F8")
+    }
+    canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+    // Emerald top banner
+    val headerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#0F5C4D")
+    }
+    canvas.drawRect(0f, 0f, width.toFloat(), 170f, headerPaint)
+
+    // Outer Emerald border & Inner Gold border
+    val borderEmerald = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#0F5C4D")
+        style = Paint.Style.STROKE
+        strokeWidth = 14f
+    }
+    canvas.drawRect(24f, 24f, width - 24f, height - 24f, borderEmerald)
+
+    val borderGold = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#F59E0B")
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+    }
+    canvas.drawRect(44f, 44f, width - 44f, height - 44f, borderGold)
+
+    // Header Title
+    val headerText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.WHITE
+        textSize = 46f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText("ENGLISH सीखो PRO", width / 2f, 92f, headerText)
+
+    val subHeader = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#FDE68A")
+        textSize = 26f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText("OFFICIAL CERTIFICATE OF ACHIEVEMENT", width / 2f, 138f, subHeader)
+
+    // Presented to label
+    val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#475569")
+        textSize = 28f
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText("यह प्रमाणपत्र गर्व के साथ प्रदान किया जाता है:", width / 2f, 255f, labelPaint)
+
+    // Student Name
+    val namePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#0F5C4D")
+        textSize = 64f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText(progress.studentName, width / 2f, 345f, namePaint)
+
+    // Gold underline under name
+    val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#F59E0B")
+        strokeWidth = 5f
+    }
+    canvas.drawLine(width / 2f - 220f, 370f, width / 2f + 220f, 370f, linePaint)
+
+    // Achievement details
+    val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#1E293B")
+        textSize = 30f
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText(
+        "Rank: ${progress.rankTitleHi()}",
+        width / 2f,
+        445f,
+        bodyPaint
+    )
+    canvas.drawText(
+        "Level: ${progress.level.titleEn}  |  Streak: ${progress.streakDays} Days",
+        width / 2f,
+        500f,
+        bodyPaint
+    )
+
+    // Stats Box
+    val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#ECFDF5")
+    }
+    val statRect = RectF(180f, 545f, width - 180f, 645f)
+    canvas.drawRoundRect(statRect, 22f, 22f, boxPaint)
+
+    val statPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#0F5C4D")
+        textSize = 32f
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText(
+        "${progress.xp} XP   •   ${progress.coins} Coins   •   ${progress.completedDayNumbers.size}/30 Days",
+        width / 2f,
+        607f,
+        statPaint
+    )
+
+    // Footer Date
+    val dateStr = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date())
+    val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = AndroidColor.parseColor("#64748B")
+        textSize = 24f
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText("Issued on $dateStr  •  100% Offline Hindi-to-English Learning App", width / 2f, 720f, footerPaint)
+
+    runCatching {
+        val dir = File(context.cacheDir, "certificates").apply { mkdirs() }
+        val outFile = File(dir, "english_seekho_certificate.png")
+        FileOutputStream(outFile).use { fos ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+        }
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", outFile)
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            putExtra(
+                Intent.EXTRA_TEXT,
+                "मैं 'English सीखो Pro' ऐप से रोज़ English सीख रहा हूँ! मेरी रैंक: ${progress.rankTitleHi()} (${progress.xp} XP, ${progress.streakDays} दिन की Streak)।"
+            )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(shareIntent, "सर्टिफिकेट फोटो शेयर करें"))
+    }.onFailure {
+        val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(
+                Intent.EXTRA_TEXT,
+                "मैं 'English सीखो Pro' ऐप से English सीख रहा हूँ! मेरी रैंक: ${progress.rankTitleHi()} (${progress.xp} XP, ${progress.coins} Coins)।"
+            )
+        }
+        context.startActivity(Intent.createChooser(fallbackIntent, "प्रगति शेयर करें"))
+    }
+}
+

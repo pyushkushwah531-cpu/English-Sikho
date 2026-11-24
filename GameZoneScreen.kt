@@ -73,6 +73,7 @@ fun GameZoneScreen(
     onUpdatePuzzleProgress: (levelIndex: Int, solvedCount: Int) -> Unit,
     onUpdateWordMatchBatch: (batchIndex: Int) -> Unit,
     onUpdateBossProgress: (questionIndex: Int, scoreCount: Int) -> Unit,
+    onUpdateListeningProgress: (levelIndex: Int, scoreCount: Int) -> Unit = { _, _ -> },
     onRewardEarned: (
         xp: Int,
         coins: Int,
@@ -81,7 +82,7 @@ fun GameZoneScreen(
         notifyMsg: String?
     ) -> Unit
 ) {
-    val gameMode = selectedMode.coerceIn(0, 2) // 0 = Sentence Builder, 1 = 60s Word Match, 2 = Boss Challenge
+    val gameMode = selectedMode.coerceIn(0, 3) // 0 = Sentence Builder, 1 = 60s Match, 2 = Boss, 3 = Listening
 
     Column(
         modifier = Modifier
@@ -145,6 +146,14 @@ fun GameZoneScreen(
                 },
                 label = { Text("Boss गेम (40 लेवल)") }
             )
+            FilterChip(
+                selected = gameMode == 3,
+                onClick = {
+                    feedback.playTap(progress.vibrationEnabled)
+                    onSelectMode(3)
+                },
+                label = { Text("सुनो और चुनो (28)") }
+            )
         }
 
         when (gameMode) {
@@ -164,11 +173,19 @@ fun GameZoneScreen(
                 onRewardEarned = onRewardEarned
             )
 
-            else -> WeeklyBossChallengeGame(
+            2 -> WeeklyBossChallengeGame(
                 progress = progress,
                 speechCoach = speechCoach,
                 feedback = feedback,
                 onUpdateBossProgress = onUpdateBossProgress,
+                onRewardEarned = onRewardEarned
+            )
+
+            else -> ListeningChallengeGame(
+                progress = progress,
+                speechCoach = speechCoach,
+                feedback = feedback,
+                onUpdateListeningProgress = onUpdateListeningProgress,
                 onRewardEarned = onRewardEarned
             )
         }
@@ -830,3 +847,172 @@ private fun WeeklyBossChallengeGame(
         }
     }
 }
+
+@Composable
+private fun ListeningChallengeGame(
+    progress: UserProgress,
+    speechCoach: SpeechCoach,
+    feedback: FeedbackManager,
+    onUpdateListeningProgress: (Int, Int) -> Unit,
+    onRewardEarned: (Int, Int, String?, String?, String?) -> Unit
+) {
+    val sentences = CurriculumRepository.dailyUseSentences
+    var lIndex by remember {
+        mutableIntStateOf(progress.listeningLevelIndex.coerceIn(0, sentences.lastIndex))
+    }
+    val target = sentences[lIndex]
+    val score = progress.listeningScoreCount
+
+    val options = remember(lIndex) {
+        val distractors = sentences
+            .filterIndexed { idx, _ -> idx != lIndex }
+            .shuffled()
+            .take(3)
+            .map { it.hindi }
+        (distractors + target.hindi).shuffled()
+    }
+
+    var pickedHindi by remember(lIndex) { mutableStateOf("") }
+    var revealEnglish by remember(lIndex) { mutableStateOf(false) }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = CardSurface),
+        border = BorderStroke(1.5.dp, EmeraldPrimary),
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "सुनो और चुनो · लेवल ${lIndex + 1} / ${sentences.size}",
+                    fontWeight = FontWeight.Bold,
+                    color = EmeraldPrimary
+                )
+                Text(
+                    text = "सही: $score",
+                    fontWeight = FontWeight.Bold,
+                    color = AmberAccent
+                )
+            }
+
+            LinearProgressIndicator(
+                progress = { (lIndex + 1).toFloat() / sentences.size.toFloat() },
+                modifier = Modifier.fillMaxWidth().height(6.dp),
+                color = EmeraldPrimary
+            )
+
+            Text(
+                text = "पहले अंग्रेज़ी वाक्य ध्यान से सुनें, फिर नीचे से सही हिंदी अर्थ चुनें:",
+                style = MaterialTheme.typography.bodySmall,
+                color = SlateMuted
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = {
+                        feedback.playTap(progress.vibrationEnabled)
+                        speechCoach.speak(target.english, 0.8f)
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Rounded.VolumeUp, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("0.8x धीरे सुनें")
+                }
+                OutlinedButton(
+                    onClick = {
+                        feedback.playTap(progress.vibrationEnabled)
+                        speechCoach.speak(target.english, 1.0f)
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Rounded.VolumeUp, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("1.0x सुनें")
+                }
+            }
+
+            options.forEach { opt ->
+                val isSelected = pickedHindi == opt
+                val isCorrect = opt == target.hindi
+                val borderCol = when {
+                    pickedHindi.isNotBlank() && isCorrect -> SuccessGreen
+                    pickedHindi.isNotBlank() && isSelected && !isCorrect -> ErrorRed
+                    else -> HairlineBorder
+                }
+                OutlinedButton(
+                    onClick = {
+                        if (pickedHindi.isBlank()) {
+                            pickedHindi = opt
+                            revealEnglish = true
+                            if (isCorrect) {
+                                val nextScore = score + 1
+                                val nextIdx = (lIndex + 1) % sentences.size
+                                feedback.playCorrect(progress.soundEnabled, progress.vibrationEnabled)
+                                onUpdateListeningProgress(nextIdx, nextScore)
+                                val badge = when {
+                                    nextScore >= 15 -> "Listening Legend"
+                                    nextScore >= 5 -> "Listening Master"
+                                    else -> null
+                                }
+                                val milestone = nextScore % 5 == 0
+                                onRewardEarned(
+                                    15,
+                                    8,
+                                    badge,
+                                    if (milestone) "सुनकर पहचानो चैलेंज जीता! 🎧" else null,
+                                    if (milestone) "शाबाश! आपने अब तक $nextScore वाक्य सुनकर सही पहचाने।" else null
+                                )
+                            } else {
+                                feedback.playWrong(progress.soundEnabled, progress.vibrationEnabled)
+                            }
+                        }
+                    },
+                    border = BorderStroke(1.5.dp, borderCol),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(opt, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp))
+                }
+            }
+
+            if (revealEnglish) {
+                val ok = pickedHindi == target.hindi
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = if (ok) SuccessSoft else ErrorSoft),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = if (ok) "बिल्कुल सही! (+15 XP, +8 Coins)" else "सही अर्थ: ${target.hindi}",
+                            color = if (ok) SuccessGreen else ErrorRed,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text("अंग्रेज़ी वाक्य: ${target.english}", fontWeight = FontWeight.SemiBold)
+                        Text("उच्चारण: ${target.pronunciationHi}", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                    }
+                }
+                Button(
+                    onClick = {
+                        val nextIdx = (lIndex + 1) % sentences.size
+                        if (!ok) {
+                            onUpdateListeningProgress(nextIdx, score)
+                        }
+                        lIndex = nextIdx
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (lIndex < sentences.lastIndex) "अगला सुनें" else "लेवल 1 पर जाएं")
+                }
+            }
+        }
+    }
+}
+

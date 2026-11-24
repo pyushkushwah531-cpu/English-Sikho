@@ -501,4 +501,88 @@ object CurriculumRepository {
         }
         return findings
     }
+
+    val interviewQas = listOf(
+        InterviewQaItem(
+            "iq1",
+            "Tell me about yourself.",
+            "अपने बारे में बताइए।",
+            "Hello Sir/Madam, I am a dedicated graduate with strong computer and communication skills. I am a quick learner and eager to contribute positively to your team.",
+            "नमस्ते सर/मैडम, मैं मजबूत कंप्यूटर और संवाद कौशल वाला एक मेहनती स्नातक हूँ। मैं जल्दी सीखता हूँ और आपकी टीम में सकारात्मक योगदान देने के लिए उत्सुक हूँ।",
+            "परिवार की लंबी कहानी के बजाय अपना नाम, पढ़ाई, कौशल और काम करने का जोश बताएं।"
+        ),
+        InterviewQaItem(
+            "iq2",
+            "Why should we hire you?",
+            "हम आपको नौकरी पर क्यों रखें?",
+            "I bring consistency, honesty, and a strong willingness to learn. If given a chance, I will deliver reliable results and adapt quickly to company goals.",
+            "मैं नियमितता, ईमानदारी और सीखने की गहरी इच्छा साथ लाता हूँ। मौका मिलने पर मैं भरोसेमंद नतीजे दूँगा और कंपनी के लक्ष्यों के अनुसार जल्दी ढल जाऊँगा।",
+            "कंपनी को आपसे क्या फायदा होगा — अपनी मेहनत और जिम्मेदारी का भरोसा दिलाएं।"
+        ),
+        InterviewQaItem(
+            "iq3",
+            "What is your greatest strength?",
+            "आपकी सबसे बड़ी ताकत क्या है?",
+            "My biggest strength is patience and problem-solving. Even under pressure, I stay calm and complete my assigned work on time.",
+            "मेरी सबसे बड़ी ताकत धैर्य और समस्या को सुलझाना है। दबाव में भी मैं शांत रहता हूँ और दिया गया काम समय पर पूरा करता हूँ।",
+            "ताकत बताने के साथ एक छोटा उदाहरण भी जोड़ें जैसे 'completing work on time'।"
+        ),
+        InterviewQaItem(
+            "iq4",
+            "What is your weakness?",
+            "आपकी कमज़ोरी क्या है?",
+            "Earlier I used to hesitate while speaking English, so I started practicing daily for fifteen minutes. Now I am much more confident.",
+            "पहले मुझे अंग्रेज़ी बोलने में झिझक होती थी, इसलिए मैंने रोज़ पंद्रह मिनट अभ्यास शुरू किया। अब मैं काफी आत्मविश्वासी हूँ।",
+            "कमज़ोरी ऐसी बताएं जिसे आप सुधार रहे हैं — इससे आपकी सीखने की क्षमता दिखती है।"
+        ),
+        InterviewQaItem(
+            "iq5",
+            "Why do you want to join our company?",
+            "आप हमारी कंपनी से क्यों जुड़ना चाहते हैं?",
+            "Your company is well known for its supportive work culture and growth opportunities. I want to build a long-term career while learning from experienced seniors.",
+            "आपकी कंपनी अपने सहयोगी माहौल और आगे बढ़ने के अवसरों के लिए जानी जाती है। मैं अनुभवी सीनियर्स से सीखते हुए यहीं अपना करियर बनाना चाहता हूँ।",
+            "कंपनी की तारीफ करें और बताएं कि आप लंबे समय तक टिकना चाहते हैं।"
+        ),
+        InterviewQaItem(
+            "iq6",
+            "Where do you see yourself in five years?",
+            "अगले 5 साल में आप खुद को कहाँ देखते हैं?",
+            "In five years, I see myself becoming a dependable senior team member who guides newcomers and handles larger responsibilities successfully.",
+            "पाँच सालों में मैं खुद को एक भरोसेमंद सीनियर सदस्य के रूप में देखता हूँ जो नए लोगों का मार्गदर्शन करे और बड़ी जिम्मेदारियाँ संभाले।",
+            "यह न कहें कि 'मैं अपनी कंपनी खोलूँगा' — हमेशा मौजूदा कंपनी में तरक्की दिखाएं।"
+        ),
+        InterviewQaItem(
+            "iq7",
+            "What are your salary expectations?",
+            "आपकी सैलरी की क्या उम्मीद है?",
+            "I am flexible and open to your company standards for this role. My first priority is learning and proving my value to the team.",
+            "मैं इस पद के लिए आपकी कंपनी के मानकों से सहमत हूँ। मेरी पहली प्राथमिकता सीखना और टीम के लिए अपना योगदान साबित करना है।",
+            "पहली ही बातचीत में अड़ने के बजाय 'open to company standards' बोलना स्मार्ट रहता है।"
+        ),
+        InterviewQaItem(
+            "iq8",
+            "Are you comfortable working in a team?",
+            "क्या आप टीम के साथ काम करने में सहज हैं?",
+            "Yes, I enjoy teamwork because sharing ideas helps everyone solve problems faster and achieve better quality.",
+            "जी हाँ, मुझे टीम में काम करना पसंद है क्योंकि विचार साझा करने से समस्याएँ जल्दी हल होती हैं और गुणवत्ता बेहतर होती है।",
+            "सहयोग, सुनने की आदत और मिलकर लक्ष्य पाने पर ज़ोर दें।"
+        ),
+        InterviewQaItem(
+            "iq9",
+            "How do you handle work pressure or deadlines?",
+            "काम के दबाव या डेडलाइन को कैसे संभालते हैं?",
+            "I divide big tasks into smaller steps, set clear priorities, and focus on one step at a time without panicking.",
+            "मैं बड़े काम को छोटे हिस्सों में बाँटता हूँ, प्राथमिकता तय करता हूँ और घबराए बिना एक-एक कदम पूरा करता हूँ।",
+            "प्लानिंग और शांत रहने की क्षमता का ज़िक्र हमेशा अच्छा प्रभाव डालता है।"
+        ),
+        InterviewQaItem(
+            "iq10",
+            "Do you have any questions for us?",
+            "क्या आप हमसे कुछ पूछना चाहते हैं?",
+            "Yes, could you share what skills or qualities you value most in a new joiner during the first three months?",
+            "जी हाँ, क्या आप बता सकते हैं कि शुरुआती तीन महीनों में आप किसी नए कर्मचारी में कौन से गुण सबसे ज़्यादा देखते हैं?",
+            "कभी भी 'No questions' न बोलें — यह सवाल आपकी गंभीरता और रुचि दिखाता है।"
+        )
+    )
 }
+

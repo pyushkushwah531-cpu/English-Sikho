@@ -174,3 +174,13 @@ data class WritingCorrection(
     val corrected: String,
     val reasonHi: String
 )
+
+data class InterviewQaItem(
+    val id: String,
+    val questionEn: String,
+    val questionHi: String,
+    val answerEn: String,
+    val answerHi: String,
+    val tipHi: String
+)
+
