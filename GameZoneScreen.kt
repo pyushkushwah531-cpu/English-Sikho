@@ -68,6 +68,8 @@ fun GameZoneScreen(
     progress: UserProgress,
     speechCoach: SpeechCoach,
     feedback: FeedbackManager,
+    selectedMode: Int = 0,
+    onSelectMode: (Int) -> Unit = {},
     onUpdatePuzzleProgress: (levelIndex: Int, solvedCount: Int) -> Unit,
     onUpdateWordMatchBatch: (batchIndex: Int) -> Unit,
     onUpdateBossProgress: (questionIndex: Int, scoreCount: Int) -> Unit,
@@ -79,7 +81,7 @@ fun GameZoneScreen(
         notifyMsg: String?
     ) -> Unit
 ) {
-    var gameMode by remember { mutableIntStateOf(0) } // 0 = Sentence Builder, 1 = 60s Word Match, 2 = Boss Challenge
+    val gameMode = selectedMode.coerceIn(0, 2) // 0 = Sentence Builder, 1 = 60s Word Match, 2 = Boss Challenge
 
     Column(
         modifier = Modifier
@@ -121,17 +123,26 @@ fun GameZoneScreen(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = gameMode == 0,
-                onClick = { gameMode = 0 },
+                onClick = {
+                    feedback.playTap(progress.vibrationEnabled)
+                    onSelectMode(0)
+                },
                 label = { Text("वाक्य पहेली (50 लेवल)") }
             )
             FilterChip(
                 selected = gameMode == 1,
-                onClick = { gameMode = 1 },
+                onClick = {
+                    feedback.playTap(progress.vibrationEnabled)
+                    onSelectMode(1)
+                },
                 label = { Text("60s मिलान (8 स्टेज)") }
             )
             FilterChip(
                 selected = gameMode == 2,
-                onClick = { gameMode = 2 },
+                onClick = {
+                    feedback.playTap(progress.vibrationEnabled)
+                    onSelectMode(2)
+                },
                 label = { Text("Boss गेम (40 लेवल)") }
             )
         }
@@ -310,6 +321,7 @@ private fun SentenceBuilderGame(
                                     selected = true,
                                     onClick = {
                                         if (statusState != 1) {
+                                            feedback.playTap(progress.vibrationEnabled)
                                             selectedIndices = selectedIndices.toMutableList().also { it.removeAt(pos) }
                                             statusState = 0
                                         }
@@ -329,6 +341,7 @@ private fun SentenceBuilderGame(
                     OutlinedButton(
                         onClick = {
                             if (!isUsed && statusState != 1) {
+                                feedback.playTap(progress.vibrationEnabled)
                                 selectedIndices = selectedIndices + idx
                                 statusState = 0
                             }
@@ -343,6 +356,7 @@ private fun SentenceBuilderGame(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(
                     onClick = {
+                        feedback.playTap(progress.vibrationEnabled)
                         selectedIndices = emptyList()
                         statusState = 0
                     },
@@ -547,6 +561,7 @@ private fun WordMatchSpeedGame(
                         Button(
                             onClick = {
                                 if (!timerActive) timerActive = true
+                                feedback.playTap(progress.vibrationEnabled)
                                 selectedEnglishId = card.id
                                 speechCoach.speak(card.wordEn, 0.9f)
                             },

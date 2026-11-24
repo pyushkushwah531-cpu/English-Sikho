@@ -27,9 +27,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,13 +59,11 @@ fun HindiBridgeAndGrammarScreen(
     speechCoach: SpeechCoach,
     feedback: FeedbackManager,
     initialSection: Int = 0,
+    onSelectSection: (Int) -> Unit = {},
     onAddXp: (Int) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var section by remember { mutableIntStateOf(initialSection) } // 0 = Traps, 1 = Hinglish, 2 = Grammar, 3 = 50 Verb Forms, 4 = Writing Coach
-    LaunchedEffect(initialSection) {
-        section = initialSection
-    }
+    val section = initialSection.coerceIn(0, 4) // 0 = Traps, 1 = Hinglish, 2 = Grammar, 3 = 50 Verb Forms, 4 = Writing Coach
 
     var hinglishInput by remember { mutableStateOf(CurriculumRepository.sampleHinglishPresets.first()) }
     var converted by remember { mutableStateOf(CurriculumRepository.convertHinglishOffline(CurriculumRepository.sampleHinglishPresets.first())) }
@@ -98,11 +94,11 @@ fun HindiBridgeAndGrammarScreen(
         )
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            FilterChip(selected = section == 0, onClick = { section = 0 }, label = { Text("अनुवाद के जाल (15)") })
-            FilterChip(selected = section == 1, onClick = { section = 1 }, label = { Text("Hinglish ➔ Pro") })
-            FilterChip(selected = section == 2, onClick = { section = 2 }, label = { Text("Visual Grammar") })
-            FilterChip(selected = section == 3, onClick = { section = 3 }, label = { Text("50 Verb Forms") })
-            FilterChip(selected = section == 4, onClick = { section = 4 }, label = { Text("Writing / Email") })
+            FilterChip(selected = section == 0, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectSection(0) }, label = { Text("अनुवाद के जाल (15)") })
+            FilterChip(selected = section == 1, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectSection(1) }, label = { Text("Hinglish ➔ Pro") })
+            FilterChip(selected = section == 2, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectSection(2) }, label = { Text("Visual Grammar") })
+            FilterChip(selected = section == 3, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectSection(3) }, label = { Text("50 Verb Forms") })
+            FilterChip(selected = section == 4, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectSection(4) }, label = { Text("Writing / Email") })
         }
 
         when (section) {

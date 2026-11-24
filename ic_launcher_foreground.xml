@@ -3,10 +3,50 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Subtle warm gold outer crest ring inside safe zone -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,54m-31,0a31,31 0,1 1,62 0a31,31 0,1 1,-62 0"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FBBF24" />
+
+    <!-- Rising Golden Star of Fluency -->
+    <path
+        android:fillColor="#FBBF24"
+        android:pathData="M54,23 L56.4,30.2 L63.6,32.6 L56.4,35 L54,42.2 L51.6,35 L44.4,32.6 L51.6,30.2 Z" />
+
+    <!-- Golden Book Binding Base -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M29,67.5 C36.5,69.5 46,70.5 54,74.5 C62,70.5 71.5,69.5 79,67.5 L79,71.5 C71.5,73.5 62,74.5 54,78.5 C46,74.5 36.5,73.5 29,71.5 Z" />
+
+    <!-- Left Open Page -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M34,32h40c3.3,0 6,2.7 6,6v32c0,3.3 -2.7,6 -6,6H34c-3.3,0 -6,-2.7 -6,-6V38C28,34.7 30.7,32 34,32z" />
+        android:pathData="M53,43.5 C46,40.5 37,40.5 30.5,43.5 L30.5,67 C37,64.5 46,65.5 53,69.5 Z" />
+
+    <!-- Right Open Page -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M55,43.5 C62,40.5 71,40.5 77.5,43.5 L77.5,67 C71,65.5 62,64.5 55,69.5 Z" />
+
+    <!-- Bold 'A' Letter on Left Page -->
     <path
         android:fillColor="#0F5C4D"
-        android:pathData="M38,44h32v5H38zM38,53h24v5H38zM38,62h28v5H38z" />
+        android:pathData="M36.5,63 L40.3,48.5 L43.3,48.5 L47.1,63 L44.4,63 L43.5,59.7 L40.1,59.7 L39.2,63 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40.7,57.2 L42.9,57.2 L41.8,52.2 Z" />
+
+    <!-- Speaking & Learning Bars on Right Page -->
+    <path
+        android:fillColor="#0F5C4D"
+        android:pathData="M59,49 h13 v3 h-13 z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M59,54.8 h10 v3 h-10 z" />
+    <path
+        android:fillColor="#0F5C4D"
+        android:pathData="M59,60.6 h12 v3 h-12 z" />
 </vector>

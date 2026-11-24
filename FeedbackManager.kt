@@ -50,6 +50,12 @@ class FeedbackManager(private val context: Context) {
         }
     }
 
+    fun playTap(vibrationEnabled: Boolean) {
+        if (vibrationEnabled) {
+            vibrateOnce(18L)
+        }
+    }
+
     fun playCorrect(soundEnabled: Boolean, vibrationEnabled: Boolean) {
         if (soundEnabled) {
             runCatching {

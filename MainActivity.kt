@@ -10,10 +10,29 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MenuBook
@@ -26,6 +45,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -38,13 +58,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.englishseekho.pro.data.LocalProgressStore
 import com.englishseekho.pro.data.UserProgress
@@ -59,9 +88,14 @@ import com.englishseekho.pro.ui.screens.LevelTestScreen
 import com.englishseekho.pro.ui.screens.SettingsAlertDialog
 import com.englishseekho.pro.ui.screens.SpeakingStudioScreen
 import com.englishseekho.pro.ui.screens.VocabAndStoriesScreen
+import com.englishseekho.pro.ui.theme.AmberLight
 import com.englishseekho.pro.ui.theme.EmeraldLight
 import com.englishseekho.pro.ui.theme.EmeraldPrimary
 import com.englishseekho.pro.ui.theme.EnglishSeekhoTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private data class NavStep(val tab: Int, val sub: Int = 0)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,8 +117,12 @@ fun EnglishSeekhoRootApp() {
     val feedback = remember { FeedbackManager(context) }
 
     var progress by remember { mutableStateOf(store.load()) }
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var grammarInitialSection by remember { mutableIntStateOf(0) }
+    var showSplash by remember { mutableStateOf(true) }
+    var navStack by remember { mutableStateOf(listOf(NavStep(0, 0))) }
+    val currentStep = navStack.last()
+    val selectedTab = currentStep.tab
+    val currentSub = currentStep.sub
+
     var showLevelTest by remember { mutableStateOf(!progress.onboardingDone) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showCertificateDialog by remember { mutableStateOf(false) }
@@ -121,6 +159,11 @@ fun EnglishSeekhoRootApp() {
         )
     }
 
+    LaunchedEffect(Unit) {
+        delay(3000L)
+        showSplash = false
+    }
+
     DisposableEffect(Unit) {
         onDispose {
             speechCoach.release()
@@ -134,36 +177,76 @@ fun EnglishSeekhoRootApp() {
         store.save(updated)
     }
 
-    // Pro-Level Back Button System
-    BackHandler {
-        when {
-            showSettingsDialog -> showSettingsDialog = false
-            showCertificateDialog -> showCertificateDialog = false
-            showExitDialog -> showExitDialog = false
-            showLevelTest && progress.onboardingDone -> showLevelTest = false
-            selectedTab != 0 -> selectedTab = 0
-            else -> showExitDialog = true
+    fun navigateTo(tab: Int, sub: Int = 0) {
+        val target = NavStep(tab, sub)
+        if (navStack.lastOrNull() != target) {
+            navStack = (navStack + target).takeLast(40)
         }
     }
 
-    if (showLevelTest) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("English सीखो Pro", fontWeight = FontWeight.Bold) },
-                    actions = {
-                        IconButton(onClick = { showSettingsDialog = true }) {
-                            Icon(Icons.Rounded.Settings, contentDescription = "सेटिंग्स", tint = EmeraldLight)
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = EmeraldPrimary,
-                        titleContentColor = EmeraldLight
-                    )
-                )
+    fun stepBack(): Boolean {
+        return when {
+            showSplash -> true
+            showSettingsDialog -> {
+                showSettingsDialog = false
+                true
             }
-        ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
+            showCertificateDialog -> {
+                showCertificateDialog = false
+                true
+            }
+            showExitDialog -> {
+                showExitDialog = false
+                true
+            }
+            showLevelTest && progress.onboardingDone -> {
+                showLevelTest = false
+                true
+            }
+            navStack.size > 1 -> {
+                feedback.playTap(progress.vibrationEnabled)
+                navStack = navStack.dropLast(1)
+                true
+            }
+            else -> false
+        }
+    }
+
+    // Pro-Level Step-by-Step Back Navigation System
+    BackHandler {
+        if (!stepBack()) {
+            showExitDialog = true
+        }
+    }
+
+    Crossfade(targetState = showSplash, label = "splash_transition") { isSplash ->
+        if (isSplash) {
+            SplashIntroScreen()
+        } else if (showLevelTest) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        navigationIcon = {
+                            if (progress.onboardingDone) {
+                                IconButton(onClick = { stepBack() }) {
+                                    Icon(Icons.Rounded.ArrowBack, contentDescription = "पीछे जाएं", tint = EmeraldLight)
+                                }
+                            }
+                        },
+                        title = { Text("English सीखो Pro", fontWeight = FontWeight.Bold) },
+                        actions = {
+                            IconButton(onClick = { showSettingsDialog = true }) {
+                                Icon(Icons.Rounded.Settings, contentDescription = "सेटिंग्स", tint = EmeraldLight)
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = EmeraldPrimary,
+                            titleContentColor = EmeraldLight
+                        )
+                    )
+                }
+            ) { innerPadding ->
+                Box(modifier = Modifier.padding(innerPadding)) {
                 LevelTestScreen(
                     initialName = progress.studentName,
                     feedback = feedback,
@@ -203,6 +286,13 @@ fun EnglishSeekhoRootApp() {
         Scaffold(
             topBar = {
                 TopAppBar(
+                    navigationIcon = {
+                        if (navStack.size > 1) {
+                            IconButton(onClick = { stepBack() }) {
+                                Icon(Icons.Rounded.ArrowBack, contentDescription = "पीछे जाएं", tint = EmeraldLight)
+                            }
+                        }
+                    },
                     title = {
                         Column {
                             Text("English सीखो Pro", fontWeight = FontWeight.Bold)
@@ -233,8 +323,8 @@ fun EnglishSeekhoRootApp() {
                         NavigationBarItem(
                             selected = selectedTab == index,
                             onClick = {
-                                if (index != 3) grammarInitialSection = 0
-                                selectedTab = index
+                                feedback.playTap(progress.vibrationEnabled)
+                                navigateTo(index, 0)
                             },
                             icon = { Icon(icon, contentDescription = label) },
                             label = { Text(label, maxLines = 1) }
@@ -289,10 +379,13 @@ fun EnglishSeekhoRootApp() {
                                 }
                             }
                         },
-                        onNavigateTab = { selectedTab = it },
+                        onNavigateTab = {
+                            feedback.playTap(progress.vibrationEnabled)
+                            navigateTo(it, 0)
+                        },
                         onOpenWritingCoach = {
-                            grammarInitialSection = 4
-                            selectedTab = 3
+                            feedback.playTap(progress.vibrationEnabled)
+                            navigateTo(3, 4)
                         },
                         onOpenCertificateDialog = { showCertificateDialog = true },
                         onRetakeLevelTest = { showLevelTest = true }
@@ -302,6 +395,8 @@ fun EnglishSeekhoRootApp() {
                         progress = progress,
                         speechCoach = speechCoach,
                         feedback = feedback,
+                        selectedMode = if (selectedTab == 1) currentSub else 0,
+                        onSelectMode = { navigateTo(1, it) },
                         onUpdatePuzzleProgress = { levelIdx, solved ->
                             updateProgress {
                                 it.copy(
@@ -343,6 +438,8 @@ fun EnglishSeekhoRootApp() {
                         feedback = feedback,
                         hasMicPermission = hasMicPermission,
                         onRequestMicPermission = { micLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                        selectedMode = if (selectedTab == 2) currentSub else 0,
+                        onSelectMode = { navigateTo(2, it) },
                         onAddXp = { bonus -> updateProgress { it.copy(xp = it.xp + bonus, coins = it.coins + 5) } }
                     )
 
@@ -350,7 +447,8 @@ fun EnglishSeekhoRootApp() {
                         progress = progress,
                         speechCoach = speechCoach,
                         feedback = feedback,
-                        initialSection = grammarInitialSection,
+                        initialSection = if (selectedTab == 3) currentSub else 0,
+                        onSelectSection = { navigateTo(3, it) },
                         onAddXp = { bonus -> updateProgress { it.copy(xp = it.xp + bonus, coins = it.coins + 5) } }
                     )
 
@@ -358,6 +456,8 @@ fun EnglishSeekhoRootApp() {
                         progress = progress,
                         speechCoach = speechCoach,
                         feedback = feedback,
+                        selectedTab = if (selectedTab == 4) currentSub else 0,
+                        onSelectTab = { navigateTo(4, it) },
                         onMarkWord = { wordId, mastered ->
                             updateProgress { p ->
                                 if (mastered) {
@@ -378,6 +478,7 @@ fun EnglishSeekhoRootApp() {
                 }
             }
         }
+    }
     }
 
     if (showSettingsDialog) {
@@ -440,5 +541,121 @@ fun EnglishSeekhoRootApp() {
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun SplashIntroScreen() {
+    val iconScale = remember { Animatable(0.65f) }
+    val contentAlpha = remember { Animatable(0f) }
+    val barProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(Unit) {
+        launch {
+            contentAlpha.animateTo(1f, animationSpec = tween(650, easing = FastOutSlowInEasing))
+        }
+        launch {
+            iconScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+        }
+        launch {
+            barProgress.animateTo(1f, animationSpec = tween(2850, easing = LinearEasing))
+        }
+    }
+
+    val warmGold = Color(0xFFFBBF24)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF07332A),
+                        EmeraldPrimary,
+                        Color(0xFF14725F)
+                    )
+                )
+            )
+            .padding(28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .alpha(contentAlpha.value),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(126.dp)
+                    .scale(iconScale.value)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color(0xFF0B463A))
+                    .border(2.5.dp, warmGold, RoundedCornerShape(32.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    contentDescription = "English सीखो Pro Logo",
+                    modifier = Modifier.size(116.dp)
+                )
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                text = "English सीखो Pro",
+                fontSize = 30.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+
+            Box(
+                modifier = Modifier
+                    .width((150 * barProgress.value.coerceAtMost(0.45f) / 0.45f).dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(warmGold)
+            )
+
+            Text(
+                text = "आत्मविश्वास से अंग्रेज़ी बोलें · हिंदी से English",
+                style = MaterialTheme.typography.bodyMedium,
+                color = AmberLight,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(bottom = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            LinearProgressIndicator(
+                progress = { barProgress.value },
+                modifier = Modifier
+                    .width(210.dp)
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+                color = warmGold,
+                trackColor = Color(0x33FFFFFF)
+            )
+            Text(
+                text = "v1.2 · 100% ऑफलाइन तैयार",
+                style = MaterialTheme.typography.labelMedium,
+                color = EmeraldLight
+            )
+        }
     }
 }

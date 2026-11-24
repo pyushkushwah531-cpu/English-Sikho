@@ -59,9 +59,11 @@ fun SpeakingStudioScreen(
     feedback: FeedbackManager,
     hasMicPermission: Boolean,
     onRequestMicPermission: () -> Unit,
+    selectedMode: Int = 0,
+    onSelectMode: (Int) -> Unit = {},
     onAddXp: (Int) -> Unit
 ) {
-    var mode by remember { mutableIntStateOf(0) } // 0 = Roleplay, 1 = Pronunciation & Shadowing
+    val mode = selectedMode.coerceIn(0, 1) // 0 = Roleplay, 1 = Pronunciation & Shadowing
     var selectedScenarioIndex by remember { mutableIntStateOf(0) }
     var turnIndex by remember { mutableIntStateOf(0) }
     var userReplyInput by remember { mutableStateOf("") }
@@ -95,12 +97,18 @@ fun SpeakingStudioScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             FilterChip(
                 selected = mode == 0,
-                onClick = { mode = 0 },
+                onClick = {
+                    feedback.playTap(progress.vibrationEnabled)
+                    onSelectMode(0)
+                },
                 label = { Text("Roleplay बातचीत (5)") }
             )
             FilterChip(
                 selected = mode == 1,
-                onClick = { mode = 1 },
+                onClick = {
+                    feedback.playTap(progress.vibrationEnabled)
+                    onSelectMode(1)
+                },
                 label = { Text("Pronunciation (8)") }
             )
         }

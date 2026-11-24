@@ -57,10 +57,12 @@ fun VocabAndStoriesScreen(
     progress: UserProgress,
     speechCoach: SpeechCoach,
     feedback: FeedbackManager,
+    selectedTab: Int = 0,
+    onSelectTab: (Int) -> Unit = {},
     onMarkWord: (wordId: String, mastered: Boolean) -> Unit,
     onAddXp: (Int) -> Unit
 ) {
-    var tab by remember { mutableIntStateOf(0) } // 0 = Flashcards, 1 = Daily Sentences, 2 = Confusing Words, 3 = Tap Stories, 4 = Idioms
+    val tab = selectedTab.coerceIn(0, 4) // 0 = Flashcards, 1 = Daily Sentences, 2 = Confusing Words, 3 = Tap Stories, 4 = Idioms
     var cardIndex by remember { mutableIntStateOf(0) }
     var isFlipped by remember { mutableStateOf(false) }
 
@@ -86,11 +88,11 @@ fun VocabAndStoriesScreen(
         )
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text("40 Flashcards") })
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text("रोज़ के वाक्य (28)") })
-            FilterChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text("Confusing Quiz") })
-            FilterChip(selected = tab == 3, onClick = { tab = 3 }, label = { Text("6 कहानियाँ") })
-            FilterChip(selected = tab == 4, onClick = { tab = 4 }, label = { Text("12 मुहावरे (Idioms)") })
+            FilterChip(selected = tab == 0, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectTab(0) }, label = { Text("40 Flashcards") })
+            FilterChip(selected = tab == 1, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectTab(1) }, label = { Text("रोज़ के वाक्य (28)") })
+            FilterChip(selected = tab == 2, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectTab(2) }, label = { Text("Confusing Quiz") })
+            FilterChip(selected = tab == 3, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectTab(3) }, label = { Text("6 कहानियाँ") })
+            FilterChip(selected = tab == 4, onClick = { feedback.playTap(progress.vibrationEnabled); onSelectTab(4) }, label = { Text("12 मुहावरे (Idioms)") })
         }
 
         when (tab) {
@@ -108,7 +110,10 @@ fun VocabAndStoriesScreen(
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { isFlipped = !isFlipped }
+                        .clickable {
+                            feedback.playTap(progress.vibrationEnabled)
+                            isFlipped = !isFlipped
+                        }
                 ) {
                     Column(modifier = Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(card.category, style = MaterialTheme.typography.labelMedium, color = SlateMuted)
@@ -280,7 +285,10 @@ fun VocabAndStoriesScreen(
                                             color = EmeraldPrimary,
                                             fontWeight = FontWeight.Bold,
                                             textDecoration = TextDecoration.Underline,
-                                            modifier = Modifier.clickable { selectedGlossary = glossaryItem }
+                                            modifier = Modifier.clickable {
+                                                feedback.playTap(progress.vibrationEnabled)
+                                                selectedGlossary = glossaryItem
+                                            }
                                         )
                                     } else {
                                         Text(text = rawWord)
