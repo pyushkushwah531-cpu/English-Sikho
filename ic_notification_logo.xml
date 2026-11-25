@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Crest Ring matching App Icon -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0"
+        android:strokeWidth="5"
+        android:strokeColor="#FFFFFF" />
+
+    <!-- Rising Star of Fluency matching App Icon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,18 L57.2,27.5 L66.8,30.7 L57.2,33.9 L54,43.4 L50.8,33.9 L41.2,30.7 L50.8,27.5 Z" />
+
+    <!-- Open Book Left Page with clean 'A' cutout -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M52.5,45 C44,41.5 33,41.5 25,45 L25,74 C33,71 44,72.2 52.5,77 Z M33,68.5 L37.8,51 L41.5,51 L46.3,68.5 L42.9,68.5 L41.8,64.5 L37.5,64.5 L36.4,68.5 Z M38.2,61.5 L41.1,61.5 L39.65,55.2 Z" />
+
+    <!-- Open Book Right Page with learning line cutouts -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M55.5,45 C64,41.5 75,41.5 83,45 L83,74 C75,71 64,72.2 55.5,77 Z M61,51.5 h16 v4 h-16 z M61,58.5 h12.5 v4 h-12.5 z M61,65.5 h15 v4 h-15 z" />
+
+    <!-- Book Binding Ribbon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M23,76.5 C32.5,79 44,80.5 54,85.5 C64,80.5 75.5,79 85,76.5 L85,81.5 C75.5,84 64,85.5 54,90.5 C44,85.5 32.5,84 23,81.5 Z" />
+</vector>

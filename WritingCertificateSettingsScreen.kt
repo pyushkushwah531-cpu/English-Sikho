@@ -10,6 +10,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -41,10 +43,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import com.englishseekho.pro.R
 import com.englishseekho.pro.data.UserProgress
 import com.englishseekho.pro.ui.theme.CardSurface
 import com.englishseekho.pro.ui.theme.EmeraldLight
@@ -176,10 +181,27 @@ fun SettingsAlertDialog(
                 HorizontalDivider(color = HairlineBorder)
 
                 OutlinedButton(
+                    onClick = {
+                        runCatching {
+                            val shareText = "मैं 'English सीखो Pro' ऐप से रोज़ बिल्कुल फ्री और 100% ऑफलाइन अंग्रेज़ी बोलना सीख रहा हूँ!\n\nइसमें 30-दिन का कोर्स, 1,430+ इंग्लिश गेम लेवल, माइक से उच्चारण जाँच और जॉब इंटरव्यू तैयारी सब कुछ हिंदी में है।\n\nजानकारी व Privacy Policy: https://pyushkushwah531-cpu.github.io/English-Sikho/privacy.html"
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "English सीखो Pro ऐप")
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "दोस्तों को ऐप शेयर करें"))
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("दोस्तों को ऐप शेयर करें 📤")
+                }
+
+                OutlinedButton(
                     onClick = { showPrivacyDialog = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Privacy Policy व ऐप जानकारी (v1.3.1)")
+                    Text("Privacy Policy व ऐप जानकारी (v1.3.2)")
                 }
 
                 OutlinedButton(
@@ -254,8 +276,22 @@ fun SettingsAlertDialog(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("ऐप: English सीखो Pro (v1.3.1)", fontWeight = FontWeight.Bold)
-                    Text("Package ID: com.englishseekho.pro", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_app_logo_unified),
+                            contentDescription = "English सीखो Pro Logo",
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                        Column {
+                            Text("ऐप: English सीखो Pro (v1.3.2)", fontWeight = FontWeight.Bold)
+                            Text("Package ID: com.englishseekho.pro", style = MaterialTheme.typography.bodySmall, color = SlateMuted)
+                        }
+                    }
                     HorizontalDivider(color = HairlineBorder)
                     Text("1. आपका सारा डेटा आपके फोन में सुरक्षित:", fontWeight = FontWeight.SemiBold)
                     Text(
