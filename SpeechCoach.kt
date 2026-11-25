@@ -56,7 +56,7 @@ class SpeechCoach(private val context: Context) {
         // Pick the clearest local/high-quality English voice so every Vivo/Android phone sounds crisp & natural
         runCatching {
             val allVoices = engine.voices.orEmpty().filter {
-                it.locale.language.equals("en", ignoreCase = true)
+                it.locale?.language?.equals("en", ignoreCase = true) == true
             }
             if (allVoices.isNotEmpty()) {
                 val bestVoice = allVoices.maxByOrNull { scoreVoice(it, chosenLocale) }
@@ -72,7 +72,7 @@ class SpeechCoach(private val context: Context) {
 
     private fun scoreVoice(voice: Voice, preferredLocale: Locale): Int {
         var score = 0
-        val country = voice.locale.country.uppercase(Locale.ROOT)
+        val country = voice.locale?.country?.uppercase(Locale.ROOT).orEmpty()
         val name = voice.name.lowercase(Locale.ROOT)
 
         // Indian English is easiest for Hindi-medium learners to understand; UK/US next

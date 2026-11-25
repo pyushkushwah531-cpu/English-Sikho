@@ -12,6 +12,7 @@ import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -280,13 +281,22 @@ fun SettingsAlertDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_app_logo_unified),
-                            contentDescription = "English सीखो Pro Logo",
+                        Box(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                        )
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_launcher_background),
+                                contentDescription = null,
+                                modifier = Modifier.matchParentSize()
+                            )
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                                contentDescription = "English सीखो Pro Logo",
+                                modifier = Modifier.matchParentSize()
+                            )
+                        }
                         Column {
                             Text("ऐप: English सीखो Pro (v1.3.2)", fontWeight = FontWeight.Bold)
                             Text("Package ID: com.englishseekho.pro", style = MaterialTheme.typography.bodySmall, color = SlateMuted)

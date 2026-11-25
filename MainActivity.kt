@@ -234,9 +234,7 @@ fun EnglishSeekhoRootApp() {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_app_logo_unified),
-                                    contentDescription = "English सीखो Pro Logo",
+                                UnifiedAppLogo(
                                     modifier = Modifier
                                         .size(30.dp)
                                         .clip(RoundedCornerShape(8.dp))
@@ -314,9 +312,7 @@ fun EnglishSeekhoRootApp() {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_app_logo_unified),
-                                contentDescription = "English सीखो Pro Logo",
+                            UnifiedAppLogo(
                                 modifier = Modifier
                                     .size(32.dp)
                                     .clip(RoundedCornerShape(9.dp))
@@ -635,11 +631,7 @@ private fun SplashIntroScreen() {
                     .border(2.5.dp, warmGold, RoundedCornerShape(32.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_app_logo_unified),
-                    contentDescription = "English सीखो Pro Logo",
-                    modifier = Modifier.fillMaxSize()
-                )
+                UnifiedAppLogo(modifier = Modifier.fillMaxSize())
             }
 
             Spacer(Modifier.height(4.dp))
@@ -692,5 +684,21 @@ private fun SplashIntroScreen() {
                 color = EmeraldLight
             )
         }
+    }
+}
+
+@Composable
+private fun UnifiedAppLogo(modifier: Modifier = Modifier) {
+    Box(modifier = modifier) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher_background),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize()
+        )
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            contentDescription = "English सीखो Pro Logo",
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
