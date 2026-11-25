@@ -45,6 +45,8 @@ jobs:
 
             mv strings.xml colors.xml themes.xml app/src/main/res/values/
             mv ic_launcher_foreground.xml ic_launcher_background.xml app/src/main/res/drawable/
+            [ -f ic_app_logo_unified.xml ] && mv ic_app_logo_unified.xml app/src/main/res/drawable/ || true
+            [ -f ic_notification_logo.xml ] && mv ic_notification_logo.xml app/src/main/res/drawable/ || true
             mv ic_launcher.xml ic_launcher_round.xml app/src/main/res/mipmap-anydpi-v26/
             mv widget_word_of_day.xml app/src/main/res/layout/
             mv word_widget_info.xml app/src/main/res/xml/
@@ -68,8 +70,8 @@ jobs:
               '        applicationId = "com.englishseekho.pro"' \
               '        minSdk = 26' \
               '        targetSdk = 34' \
-              '        versionCode = 4' \
-              '        versionName = "1.3.0"' \
+              '        versionCode = 6' \
+              '        versionName = "1.3.2"' \
               '        vectorDrawables { useSupportLibrary = true }' \
               '    }' \
               '    signingConfigs {' \
@@ -147,7 +149,7 @@ jobs:
             for f in strings.xml colors.xml themes.xml; do
               [ -f "$f" ] && mv "$f" app/src/main/res/values/
             done
-            for f in ic_launcher_foreground.xml ic_launcher_background.xml; do
+            for f in ic_launcher_foreground.xml ic_launcher_background.xml ic_app_logo_unified.xml ic_notification_logo.xml; do
               [ -f "$f" ] && mv "$f" app/src/main/res/drawable/
             done
             for f in ic_launcher.xml ic_launcher_round.xml; do
@@ -158,8 +160,43 @@ jobs:
               [ -f "$f" ] && mv "$f" app/src/main/res/xml/
             done
 
+            # Repair root build.gradle.kts if app/build.gradle.kts was accidentally uploaded to repo root
+            if [ -f "build.gradle.kts" ] && grep -q "com.englishseekho.pro" build.gradle.kts; then
+              echo "Detected app/build.gradle.kts at repo root - moving to app/build.gradle.kts and restoring root build.gradle.kts..."
+              mv build.gradle.kts app/build.gradle.kts
+              printf '%s\n' \
+                'plugins {' \
+                '    id("com.android.application") version "8.5.2" apply false' \
+                '    id("org.jetbrains.kotlin.android") version "1.9.24" apply false' \
+                '}' > build.gradle.kts
+            fi
+
             if [ ! -f "app/src/main/res/xml/file_paths.xml" ]; then
               printf '%s\n' '<?xml version="1.0" encoding="utf-8"?>' '<paths>' '    <cache-path name="certificates" path="certificates/" />' '</paths>' > app/src/main/res/xml/file_paths.xml
+            fi
+
+            if [ ! -f "app/src/main/res/drawable/ic_app_logo_unified.xml" ]; then
+              printf '%s\n' \
+                '<?xml version="1.0" encoding="utf-8"?>' \
+                '<layer-list xmlns:android="http://schemas.android.com/apk/res/android">' \
+                '    <item android:drawable="@drawable/ic_launcher_background" />' \
+                '    <item android:drawable="@drawable/ic_launcher_foreground" />' \
+                '</layer-list>' > app/src/main/res/drawable/ic_app_logo_unified.xml
+            fi
+
+            if [ ! -f "app/src/main/res/drawable/ic_notification_logo.xml" ]; then
+              printf '%s\n' \
+                '<vector xmlns:android="http://schemas.android.com/apk/res/android"' \
+                '    android:width="24dp"' \
+                '    android:height="24dp"' \
+                '    android:viewportWidth="108"' \
+                '    android:viewportHeight="108">' \
+                '    <path android:fillColor="#00000000" android:pathData="M54,54m-42,0a42,42 0,1 1,84 0a42,42 0,1 1,-84 0" android:strokeWidth="5" android:strokeColor="#FFFFFF" />' \
+                '    <path android:fillColor="#FFFFFF" android:pathData="M54,18 L57.2,27.5 L66.8,30.7 L57.2,33.9 L54,43.4 L50.8,33.9 L41.2,30.7 L50.8,27.5 Z" />' \
+                '    <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M52.5,45 C44,41.5 33,41.5 25,45 L25,74 C33,71 44,72.2 52.5,77 Z M33,68.5 L37.8,51 L41.5,51 L46.3,68.5 L42.9,68.5 L41.8,64.5 L37.5,64.5 L36.4,68.5 Z M38.2,61.5 L41.1,61.5 L39.65,55.2 Z" />' \
+                '    <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M55.5,45 C64,41.5 75,41.5 83,45 L83,74 C75,71 64,72.2 55.5,77 Z M61,51.5 h16 v4 h-16 z M61,58.5 h12.5 v4 h-12.5 z M61,65.5 h15 v4 h-15 z" />' \
+                '    <path android:fillColor="#FFFFFF" android:pathData="M23,76.5 C32.5,79 44,80.5 54,85.5 C64,80.5 75.5,79 85,76.5 L85,81.5 C75.5,84 64,85.5 54,90.5 C44,85.5 32.5,84 23,81.5 Z" />' \
+                '</vector>' > app/src/main/res/drawable/ic_notification_logo.xml
             fi
           fi
 
@@ -185,7 +222,7 @@ jobs:
       - name: Prepare Release Keystore (Secrets or Auto-Generated)
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
+            printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 -d > release.jks
             echo "KEYSTORE_FILE=$PWD/release.jks" >> $GITHUB_ENV
             echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
             echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
@@ -202,7 +239,7 @@ jobs:
           fi
 
       - name: Build Debug & Signed Release APKs
-        run: gradle assembleDebug assembleRelease --no-daemon --stacktrace
+        run: gradle assembleDebug assembleRelease --no-daemon --console=plain
 
       - name: Upload Debug APK (Quick Test)
         uses: actions/upload-artifact@v4
