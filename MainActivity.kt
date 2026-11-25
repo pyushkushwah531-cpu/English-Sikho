@@ -23,6 +23,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -147,11 +148,6 @@ fun EnglishSeekhoRootApp() {
 
     LaunchedEffect(Unit) {
         NotificationHelper.ensureChannels(context)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            !NotificationHelper.hasNotificationPermission(context)
-        ) {
-            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
         NotificationHelper.scheduleDailyReminder(
             context = context,
             enabled = progress.notificationsEnabled,
@@ -233,7 +229,21 @@ fun EnglishSeekhoRootApp() {
                                 }
                             }
                         },
-                        title = { Text("English सीखो Pro", fontWeight = FontWeight.Bold) },
+                        title = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_app_logo_unified),
+                                    contentDescription = "English सीखो Pro Logo",
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                )
+                                Text("English सीखो Pro", fontWeight = FontWeight.Bold)
+                            }
+                        },
                         actions = {
                             IconButton(onClick = { showSettingsDialog = true }) {
                                 Icon(Icons.Rounded.Settings, contentDescription = "सेटिंग्स", tint = EmeraldLight)
@@ -263,11 +273,17 @@ fun EnglishSeekhoRootApp() {
                             )
                         }
                         if (progress.notificationsEnabled) {
-                            NotificationHelper.showTaskCompletedNotification(
-                                context,
-                                "लेवल टेस्ट पूरा! (+${bonusXp} XP)",
-                                "आपका 30-दिन का प्लान शुरू हो गया है।"
-                            )
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                !NotificationHelper.hasNotificationPermission(context)
+                            ) {
+                                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                NotificationHelper.showTaskCompletedNotification(
+                                    context,
+                                    "लेवल टेस्ट पूरा! (+${bonusXp} XP)",
+                                    "आपका 30-दिन का प्लान शुरू हो गया है।"
+                                )
+                            }
                         }
                         showLevelTest = false
                     }
@@ -294,13 +310,25 @@ fun EnglishSeekhoRootApp() {
                         }
                     },
                     title = {
-                        Column {
-                            Text("English सीखो Pro", fontWeight = FontWeight.Bold)
-                            Text(
-                                text = "${progress.xp} XP · ${progress.coins} Coins",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = EmeraldLight
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_app_logo_unified),
+                                contentDescription = "English सीखो Pro Logo",
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(RoundedCornerShape(9.dp))
                             )
+                            Column {
+                                Text("English सीखो Pro", fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "${progress.xp} XP · ${progress.coins} Coins",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = EmeraldLight
+                                )
+                            }
                         }
                     },
                     actions = {
@@ -604,14 +632,13 @@ private fun SplashIntroScreen() {
                     .size(126.dp)
                     .scale(iconScale.value)
                     .clip(RoundedCornerShape(32.dp))
-                    .background(Color(0xFF0B463A))
                     .border(2.5.dp, warmGold, RoundedCornerShape(32.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    painter = painterResource(id = R.drawable.ic_app_logo_unified),
                     contentDescription = "English सीखो Pro Logo",
-                    modifier = Modifier.size(116.dp)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
@@ -660,7 +687,7 @@ private fun SplashIntroScreen() {
                 trackColor = Color(0x33FFFFFF)
             )
             Text(
-                text = "v1.3.1 · 100% ऑफलाइन तैयार",
+                text = "v1.3.2 · 100% ऑफलाइन तैयार",
                 style = MaterialTheme.typography.labelMedium,
                 color = EmeraldLight
             )

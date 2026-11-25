@@ -7,6 +7,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.Voice
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -32,16 +33,83 @@ class SpeechCoach(private val context: Context) {
     init {
         tts = TextToSpeech(context.applicationContext) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val res = tts?.setLanguage(Locale.US)
-                ttsReady = res != TextToSpeech.LANG_MISSING_DATA && res != TextToSpeech.LANG_NOT_SUPPORTED
+                configureBestUnderstandableVoice()
+                ttsReady = true
             }
         }
     }
 
+    private fun configureBestUnderstandableVoice() {
+        val engine = tts ?: return
+        val indianLocale = Locale("en", "IN")
+        val preferredLocales = listOf(indianLocale, Locale.UK, Locale.US, Locale.ENGLISH)
+
+        var chosenLocale: Locale = indianLocale
+        for (loc in preferredLocales) {
+            val res = runCatching { engine.setLanguage(loc) }.getOrDefault(TextToSpeech.LANG_NOT_SUPPORTED)
+            if (res != TextToSpeech.LANG_MISSING_DATA && res != TextToSpeech.LANG_NOT_SUPPORTED) {
+                chosenLocale = loc
+                break
+            }
+        }
+
+        // Pick the clearest local/high-quality English voice so every Vivo/Android phone sounds crisp & natural
+        runCatching {
+            val allVoices = engine.voices.orEmpty().filter {
+                it.locale.language.equals("en", ignoreCase = true)
+            }
+            if (allVoices.isNotEmpty()) {
+                val bestVoice = allVoices.maxByOrNull { scoreVoice(it, chosenLocale) }
+                if (bestVoice != null) {
+                    engine.voice = bestVoice
+                }
+            }
+        }
+
+        // Warm, clear, human-like pitch
+        runCatching { engine.setPitch(0.98f) }
+    }
+
+    private fun scoreVoice(voice: Voice, preferredLocale: Locale): Int {
+        var score = 0
+        val country = voice.locale.country.uppercase(Locale.ROOT)
+        val name = voice.name.lowercase(Locale.ROOT)
+
+        // Indian English is easiest for Hindi-medium learners to understand; UK/US next
+        when {
+            country == "IN" -> score += 120
+            country == preferredLocale.country.uppercase(Locale.ROOT) -> score += 90
+            country == "GB" || country == "US" -> score += 70
+            else -> score += 30
+        }
+
+        // Prefer offline local voices so audio works cleanly even without internet
+        if (!voice.isNetworkConnectionRequired) score += 80
+
+        // Prefer higher-quality synthesis voices
+        score += when (voice.quality) {
+            Voice.QUALITY_VERY_HIGH -> 50
+            Voice.QUALITY_HIGH -> 40
+            Voice.QUALITY_NORMAL -> 25
+            else -> 5
+        }
+
+        // Prefer clear standard voices over experimental/compressed ones
+        if (name.contains("local")) score += 20
+        if (name.contains("sfg") || name.contains("enc") || name.contains("ena") || name.contains("tpf")) score += 10
+
+        return score
+    }
+
     fun speak(text: String, rate: Float = 1.0f) {
         if (!ttsReady) return
-        tts?.setSpeechRate(rate)
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "utterance_${System.currentTimeMillis()}")
+        // Slightly calmer default pace (0.92x) makes every word crystal-clear for learners
+        val clearRate = if (rate >= 0.98f) 0.92f else rate.coerceIn(0.65f, 1.15f)
+        runCatching {
+            tts?.setPitch(0.98f)
+            tts?.setSpeechRate(clearRate)
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "utterance_${System.currentTimeMillis()}")
+        }
     }
 
     fun startListening(
