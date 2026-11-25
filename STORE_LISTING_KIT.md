@@ -1,9 +1,9 @@
-# Vivo App Store & Indus Appstore Launch Kit — English सीखो Pro (v1.3.1)
+# Vivo App Store & Indus Appstore Launch Kit — English सीखो Pro (v1.3.2)
 
 ## 1. App Identity
 - **App Name:** English सीखो Pro
 - **Package Name:** `com.englishseekho.pro`
-- **Version:** `1.3.1` (`versionCode: 5`)
+- **Version:** `1.3.2` (`versionCode: 6`)
 - **Category:** Education (शिक्षा)
 - **Age Rating:** Everyone / All Ages (3+)
 - **Pricing:** Free (₹0 · No Ads · No Hidden Charges)
